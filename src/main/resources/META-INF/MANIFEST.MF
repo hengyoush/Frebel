@@ -1,0 +1,4 @@
+Manifest-Version: 1.0
+Premain-Class: io.frebel.instrument.FrebelAgent
+Can-Redefine-Classes: true
+
