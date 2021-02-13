@@ -87,12 +87,17 @@ public class FileChangeDetector {
                                 } else {
                                     // modified
                                     List<FileEntry> modified = new ArrayList<>();
+                                    List<FileEntry> created = new ArrayList<>();
                                     List<FileEntry> newFileSet = new ArrayList<>();
                                     for (String newFile : newFileArr) {
                                         Path file = Paths.get(parentPath + "/" + newFile);
                                         FileEntry newFileEntry = new FileEntry(file);
                                         newFileSet.add(newFileEntry);
+                                        boolean oldFinded = false;
                                         for (FileEntry oldFileEntry : oldFileSet) {
+                                            if (Objects.equals(oldFileEntry.fileName, newFile)) {
+                                                oldFinded = true;
+                                            }
                                             if (Objects.equals(oldFileEntry.fileName, newFile)
                                                     && !Objects.equals(oldFileEntry.md5, newFileEntry.md5)) {
                                                 System.out.println("file: " + file.toAbsolutePath() + " has changed," +
@@ -100,14 +105,22 @@ public class FileChangeDetector {
                                                 modified.add(newFileEntry);
                                             }
                                         }
+
+                                        if (!oldFinded) {
+                                            // 在旧文件记录中没有找到，是新增的文件
+                                            created.add(newFileEntry);
+                                        }
                                     }
 
                                     classFileMap.put(parentPath, newFileSet);
-                                    ClassInner[] classInners = new ClassInner[modified.size()];
+                                    ClassInner[] modifiedClassInners = new ClassInner[modified.size()];
                                     for (int i = 0; i < modified.size(); i++) {
-                                        classInners[i] = new ClassInner(Files.readAllBytes(Paths.get(parentPath + "/" + modified.get(i).fileName)));
+                                        modifiedClassInners[i] = new ClassInner(Files.readAllBytes(Paths.get(parentPath + "/" + modified.get(i).fileName)));
                                     }
-                                    ReloadManager.INSTANCE.batchReload(classInners);
+                                    for (FileEntry fileEntry : created) {
+                                        ReloadManager.INSTANCE.loadNewClass(new ClassInner(Files.readAllBytes(Paths.get(parentPath + "/" + fileEntry.fileName))));
+                                    }
+                                    ReloadManager.INSTANCE.batchReload(modifiedClassInners);
                                 }
                             }
                             watchKey.reset();

@@ -1,5 +1,7 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 import java.nio.ByteBuffer;
 
 public class ConstantFloatInfo extends CpInfo {
@@ -7,6 +9,11 @@ public class ConstantFloatInfo extends CpInfo {
 
     public ConstantFloatInfo(U1 tag) {
         super(tag);
+    }
+
+    @Override
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(tag.toBytes(), bytes.toBytes());
     }
 
     @Override

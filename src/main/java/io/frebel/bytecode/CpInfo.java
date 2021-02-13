@@ -1,7 +1,7 @@
 package io.frebel.bytecode;
 
 public abstract class CpInfo implements ConstantInfoHandler {
-    private U1 tag;
+    protected U1 tag;
 
     public CpInfo(U1 tag) {
         this.tag = tag;
@@ -11,6 +11,8 @@ public abstract class CpInfo implements ConstantInfoHandler {
     public String toString() {
         return "tag=" + tag.toHexString();
     }
+
+    public abstract byte[] toBytes();
 
     public static CpInfo newCpInfo(U1 tag) throws Exception {
         int tagValue = tag.toInt();

@@ -1,11 +1,24 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 public class FieldInfo {
     private U2 accessFlags;
     private U2 nameIndex;
     private U2 descriptorIndex;
     private U2 attributesCount;
     private AttributeInfo[] attributes;
+
+    public byte[] toBytes() {
+        byte[][] temp = new byte[attributes.length][];
+        for (int i = 0; i < attributes.length; i++) {
+            AttributeInfo attribute = attributes[i];
+            temp[i] = attribute.toBytes();
+        }
+        byte[] attributeBytes = ArrayUtils.appendBytes(temp);
+        return ArrayUtils.appendBytes(accessFlags.toBytes(), nameIndex.toBytes(),
+                descriptorIndex.toBytes(), attributesCount.toBytes(), attributeBytes);
+    }
 
     public U2 getAccessFlags() {
         return accessFlags;

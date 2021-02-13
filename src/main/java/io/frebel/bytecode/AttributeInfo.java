@@ -1,9 +1,15 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 public class AttributeInfo {
     private U2 nameIndex;
     private U4 length;
     private byte[] info;
+
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(nameIndex.toBytes(), length.toBytes(), info);
+    }
 
     public U2 getNameIndex() {
         return nameIndex;

@@ -1,5 +1,7 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 import java.nio.ByteBuffer;
 
 public class ConstantMethodHandleInfo extends CpInfo {
@@ -9,6 +11,11 @@ public class ConstantMethodHandleInfo extends CpInfo {
 
     public ConstantMethodHandleInfo(U1 tag) {
         super(tag);
+    }
+
+    @Override
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(tag.toBytes(), referenceKind.toBytes(), referenceIndex.toBytes());
     }
 
     @Override

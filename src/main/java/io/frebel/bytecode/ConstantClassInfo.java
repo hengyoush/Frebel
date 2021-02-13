@@ -1,5 +1,7 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 import java.nio.ByteBuffer;
 
 public class ConstantClassInfo extends CpInfo {
@@ -10,11 +12,16 @@ public class ConstantClassInfo extends CpInfo {
     }
 
     @Override
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(tag.toBytes(), nameIndex.toBytes());
+    }
+
+    @Override
     public void read(ByteBuffer byteBuffer) throws Exception {
         nameIndex = new U2(byteBuffer.get(), byteBuffer.get());
     }
 
-    public U2 getNameIndex() {
-        return nameIndex;
+    public int getNameIndex() {
+        return nameIndex.toInt();
     }
 }

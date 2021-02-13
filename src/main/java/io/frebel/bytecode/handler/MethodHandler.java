@@ -31,7 +31,7 @@ public class MethodHandler implements BaseByteCodeHandler {
             methodInfo.setNameIndex(new U2(byteBuffer.get(), byteBuffer.get()));
             methodInfo.setDescriptorIndex(new U2(byteBuffer.get(), byteBuffer.get()));
             methodInfo.setAttributesCount(new U2(byteBuffer.get(), byteBuffer.get()));
-            Integer attributeCount = methodInfo.getAttributesCount().toInt();
+            int attributeCount = methodInfo.getAttributesCount();
             AttributeInfo[] attributeInfos = new AttributeInfo[attributeCount];
             for (int j = 0; j < attributeCount; j++) {
                 AttributeInfo attributeInfo = new AttributeInfo();
@@ -43,6 +43,7 @@ public class MethodHandler implements BaseByteCodeHandler {
                 attributeInfo.setInfo(bytes);
             }
             methodInfo.setAttributeInfos(attributeInfos);
+            methodInfos[i] = methodInfo;
         }
     }
 }

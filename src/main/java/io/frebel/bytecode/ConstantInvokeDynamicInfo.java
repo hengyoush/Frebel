@@ -1,5 +1,7 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 import java.nio.ByteBuffer;
 
 public class ConstantInvokeDynamicInfo extends CpInfo {
@@ -8,6 +10,11 @@ public class ConstantInvokeDynamicInfo extends CpInfo {
 
     public ConstantInvokeDynamicInfo(U1 tag) {
         super(tag);
+    }
+
+    @Override
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(tag.toBytes(), bootstrapMethodAttrIndex.toBytes(), nameAndTypeIndex.toBytes());
     }
 
     @Override

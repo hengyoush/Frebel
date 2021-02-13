@@ -1,18 +1,14 @@
 package io.frebel;
 
-import io.frebel.bytecode.ClassFile;
-import io.frebel.bytecode.ClassFileAnalysis;
-
-import java.util.Map;
 import java.util.TreeMap;
 
 public class FrebelClass {
-    private String originName;
-    private TreeMap<String, ClassInner> versionClassMap;
+    private final String originName;
+    private final TreeMap<String, ClassInner> versionClassMap;
     private boolean isReloaded;
     // origin
-    private byte[] originClassBytes;
-    private ClassInner originClassInner;
+    private final byte[] originClassBytes;
+    private final ClassInner originClassInner;
     private ClassLoader classLoader;
 
     public FrebelClass(byte[] originClassBytes, ClassLoader classLoader) {
@@ -22,14 +18,11 @@ public class FrebelClass {
         this.classLoader = classLoader;
         try {
             this.originClassInner = new ClassInner(originClassBytes);
+            this.originName = originClassInner.getOriginClassName();
             this.versionClassMap.put(originClassInner.getOriginClassName(), originClassInner);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
-    }
-
-    public void updateClass(String className, byte[] update) {
-        // TODO
     }
 
     /**
@@ -57,6 +50,14 @@ public class FrebelClass {
 
     public String getCurrentVersionClassName() {
         return versionClassMap.lastKey();
+    }
+
+    public ClassInner getCurrentVersionClass() {
+        return versionClassMap.lastEntry().getValue();
+    }
+
+    public String getNextVersionClassName() {
+        return  originName + ClassVersionManager.getReloadedClassPrefix(getNextVersion());
     }
 
     public synchronized void setReloaded(boolean reloaded) {

@@ -5,18 +5,18 @@ public class ClassFile {
     private U2 minorVersion;
     private U2 majorVersion;
     private U2 constantPoolCount;
-    private CpInfo[] constantPool;
+    private CpInfo[] constantPool = new CpInfo[]{};
     private U2 accessFlags;
     private U2 thisClass;
     private U2 superClass;
     private U2 interfaceCount;
-    private U2[] interfaces;
+    private U2[] interfaces = new U2[]{};
     private U2 fieldCount;
-    private FieldInfo[] fields;
+    private FieldInfo[] fields = new FieldInfo[]{};
     private U2 methodCount;
-    private MethodInfo[] methods;
+    private MethodInfo[] methods = new MethodInfo[]{};
     private U2 attributesCount;
-    private AttributeInfo[] attributes;
+    private AttributeInfo[] attributes = new AttributeInfo[]{};
 
     public ClassFile() {
     }

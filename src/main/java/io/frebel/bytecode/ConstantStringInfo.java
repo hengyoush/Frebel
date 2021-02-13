@@ -1,5 +1,7 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 import java.nio.ByteBuffer;
 
 public class ConstantStringInfo extends CpInfo {
@@ -7,6 +9,11 @@ public class ConstantStringInfo extends CpInfo {
 
     public ConstantStringInfo(U1 tag) {
         super(tag);
+    }
+
+    @Override
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(tag.toBytes(), utf8Index.toBytes());
     }
 
     @Override

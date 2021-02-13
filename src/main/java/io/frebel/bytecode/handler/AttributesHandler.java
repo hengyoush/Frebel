@@ -26,6 +26,7 @@ public class AttributesHandler implements BaseByteCodeHandler {
             byte[] bytes = new byte[attributeInfo.getLength().toInt()];
             byteBuffer.get(bytes, 0, bytes.length);
             attributeInfo.setInfo(bytes);
+            attributeInfos[i] = attributeInfo;
         }
         classFile.setAttributes(attributeInfos);
     }

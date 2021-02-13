@@ -1,5 +1,7 @@
 package io.frebel.bytecode;
 
+import io.frebel.util.ArrayUtils;
+
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
@@ -22,6 +24,17 @@ public class ConstantUtf8Info extends CpInfo {
     public String toString() {
         return super.toString() + ",length=" + length.toInt()
                 + ",str=" + new String(bytes, StandardCharsets.UTF_8);
+    }
+
+    @Override
+    public byte[] toBytes() {
+        return ArrayUtils.appendBytes(tag.toBytes(), length.toBytes(), bytes);
+    }
+
+    public void update(String newStr) {
+        this.bytes = newStr.getBytes(StandardCharsets.UTF_8);
+        short l = (short) bytes.length;
+        this.length = new U2((byte) ((l >>> 8) & 0xff), (byte) (l & 0xff));
     }
 
     public String asString() {

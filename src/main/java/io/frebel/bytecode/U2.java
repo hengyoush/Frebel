@@ -34,4 +34,8 @@ public class U2 {
 
         return "0x" + ((hexStr.length() == 0) ? "00" : hexStr.toString());
     }
+
+    public byte[] toBytes() {
+        return value;
+    }
 }
