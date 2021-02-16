@@ -182,12 +182,4 @@ public class FileChangeDetector {
             return sb.toString();
         }
     }
-
-    public static void main(String[] args) throws IOException {
-        FileChangeDetector fileChangeDetector2 = new FileChangeDetector("/Users/hengyouhai/workspace/git/superproxy/target/classes");
-        fileChangeDetector2.interval = 1000;
-        fileChangeDetector2.start();
-        System.out.println(fileChangeDetector2.classFileMap);
-        System.in.read();
-    }
 }

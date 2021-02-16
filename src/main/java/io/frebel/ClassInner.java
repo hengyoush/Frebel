@@ -1,6 +1,7 @@
 package io.frebel;
 
 import io.frebel.bytecode.AttributeInfo;
+import io.frebel.bytecode.ClassAccessFlagsUtil;
 import io.frebel.bytecode.ClassFile;
 import io.frebel.bytecode.ClassFileAnalysis;
 import io.frebel.bytecode.ConstantClassInfo;
@@ -14,6 +15,7 @@ import io.frebel.bytecode.U2;
 import io.frebel.reload.MethodInfo;
 
 import java.io.ByteArrayOutputStream;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -21,6 +23,7 @@ import java.util.Objects;
 public class ClassInner {
     private ClassFile classFile;
     private String originClassName;
+    private String superClassName;
     private List<MethodInfo> constantPoolMethods;
     private Integer constantPoolCount;
     private byte[] bytes;
@@ -47,23 +50,42 @@ public class ClassInner {
         return (originClassName = classNameUtf8.asString().replace("/", "."));
     }
 
-//    public String getSuperClassName() {
-//        if (this.superClassName != null) {
-//            return superClassName;
-//        }
-//        U2 superClass = classFile.getSuperClass();
-//        CpInfo[] constantPool = classFile.getConstantPool();
-//        ConstantClassInfo superClassInfo = (ConstantClassInfo) constantPool[superClass.toInt()];
-//        U2 classNameIndex = superClassInfo.getNameIndex();
-//        ConstantUtf8Info classNameUtf8 = (ConstantUtf8Info) constantPool[classNameIndex.toInt()];
-//        return (superClassName = classNameUtf8.asString());
-//    }
+    public String getSuperClassName() {
+        if (this.superClassName != null) {
+            return superClassName;
+        }
+        U2 superClass = classFile.getSuperClass();
+        CpInfo[] constantPool = classFile.getConstantPool();
+        if (superClass.toInt() == 0) {
+            return null;
+        }
+        ConstantClassInfo superClassInfo = (ConstantClassInfo) constantPool[superClass.toInt() - 1];
+        ConstantUtf8Info classNameUtf8 = (ConstantUtf8Info) constantPool[superClassInfo.getNameIndex() - 1];
+        return (superClassName = classNameUtf8.asString());
+    }
+
+    public List<String> getInterfaces() {
+        U2[] interfacesIndex = classFile.getInterfaces();
+        CpInfo[] cpInfos = classFile.getConstantPool();
+        List<String> result = new ArrayList<>();
+        for (U2 index : interfacesIndex) {
+            ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[index.toInt() - 1];
+            String interfaceName = ((ConstantUtf8Info) cpInfos[constantClassInfo.getNameIndex() - 1]).asString().replace("/", ".");
+            result.add(interfaceName);
+        }
+
+        return result;
+    }
 
     public List<MethodInfo> getDeclaredMethods() {
         return getDeclaredMethods(true);
     }
 
     public List<MethodInfo> getDeclaredMethods(boolean containConstructor) {
+        return getDeclaredMethods(containConstructor, false);
+    }
+
+    public List<MethodInfo> getDeclaredMethods(boolean containConstructor, boolean notPrivate) {
         io.frebel.bytecode.MethodInfo[] selfMethodArr = classFile.getMethods();
         if (selfMethodArr == null) {
             return new ArrayList<>(0);
@@ -77,6 +99,9 @@ public class ClassInner {
             if (!containConstructor && "<init>".equals(methodName)) {
                 continue;
             }
+            if (notPrivate && Modifier.isPrivate(methodInfo.getAccessFlags())) {
+                continue;
+            }
             String descriptor = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
             result.add(new MethodInfo(getOriginClassName(), methodName, descriptor));
         }
@@ -84,75 +109,136 @@ public class ClassInner {
         return result;
     }
 
-    public List<MethodInfo> getConstantPoolMethods() {
-        if (constantPoolMethods != null) {
-            return constantPoolMethods;
-        }
-        CpInfo[] cpInfos = classFile.getConstantPool();
-        List<MethodInfo> result = new ArrayList<>();
-        for (CpInfo cpInfo : cpInfos) {
-            if (cpInfo instanceof ConstantMethodInfo) {
-                ConstantMethodInfo cpMethodInfo = (ConstantMethodInfo) cpInfo;
-                int classIndex = cpMethodInfo.getClassIndex();
-                int nameAndTypeIndex = cpMethodInfo.getNameAndTypeIndex();
+//    public List<MethodInfo> getConstantPoolMethods() {
+//        if (constantPoolMethods != null) {
+//            return constantPoolMethods;
+//        }
+//        CpInfo[] cpInfos = classFile.getConstantPool();
+//        List<MethodInfo> result = new ArrayList<>();
+//        for (CpInfo cpInfo : cpInfos) {
+//            if (cpInfo instanceof ConstantMethodInfo) {
+//                ConstantMethodInfo cpMethodInfo = (ConstantMethodInfo) cpInfo;
+//                int classIndex = cpMethodInfo.getClassIndex();
+//                int nameAndTypeIndex = cpMethodInfo.getNameAndTypeIndex();
+//
+//                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[classIndex - 1];
+//                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[nameAndTypeIndex - 1];
+//                int classNameIndex = constantClassInfo.getNameIndex();
+//                int methodNameIndex = nameAndTypeInfo.getNameIndex();
+//                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
+//                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString();
+//                String methodName = ((ConstantUtf8Info) cpInfos[methodNameIndex - 1]).asString();
+//                String descriptor = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
+//                result.add(new MethodInfo(className, methodName, descriptor, cpMethodInfo));
+//            }
+//        }
+//
+//        return constantPoolMethods = result;
+//    }
+//
+//    public synchronized void updateConstantFieldClassName(String originClassName, String newClassName) {
+//        CpInfo[] cpInfos = classFile.getConstantPool();
+//        for (CpInfo cpInfo : cpInfos) {
+//            if (cpInfo instanceof ConstantFieldInfo) {
+//                ConstantFieldInfo constantFieldInfo = (ConstantFieldInfo) cpInfo;
+//                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[constantFieldInfo.getClassIndex() - 1];
+//                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[constantFieldInfo.getNameAndTypeIndex() - 1];
+//                String t = "L" + originClassName.replace(".", "/") + ";";
+//                String newType = "L" + newClassName.replace(".", "/") + ";";
+//                int classNameIndex = constantClassInfo.getNameIndex();
+//                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
+//                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString().replace("/", ".");
+//                String type = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
+//                if (className.equals(getOriginClassName()) && type.equals(t)) {
+//                    ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).update(newType);
+//                    modified = true;
+//                }
+//            }
+//        }
+//    }
+//
+//    public synchronized boolean updateConstantMethodClassName(String originClassName, String newClassName) {
+//        CpInfo[] cpInfos = classFile.getConstantPool();
+//        for (CpInfo cpInfo : cpInfos) {
+//            if (cpInfo instanceof ConstantMethodInfo) {
+//                ConstantMethodInfo constantMethodInfo = (ConstantMethodInfo) cpInfo;
+//                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[constantMethodInfo.getClassIndex() - 1];
+//                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[constantMethodInfo.getNameAndTypeIndex() - 1];
+//                int classNameIndex = constantClassInfo.getNameIndex();
+//                int methodNameIndex = nameAndTypeInfo.getNameIndex();
+//                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
+//                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString().replace("/", ".");
+//                String name = ((ConstantUtf8Info) cpInfos[methodNameIndex - 1]).asString();
+//                String type = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
+//                if (Objects.equals(className, methodInfo.getClassName())) {
+//                    ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).update(newClassName.replace(".", "/"));
+//                    modified = true;
+//                    return true;
+//                }
+//            }
+//        }
+//
+//        return false;
+//    }
 
-                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[classIndex - 1];
-                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[nameAndTypeIndex - 1];
-                int classNameIndex = constantClassInfo.getNameIndex();
-                int methodNameIndex = nameAndTypeInfo.getNameIndex();
-                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
-                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString();
-                String methodName = ((ConstantUtf8Info) cpInfos[methodNameIndex - 1]).asString();
-                String descriptor = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
-                result.add(new MethodInfo(className, methodName, descriptor, cpMethodInfo));
-            }
-        }
+    public void updateSuperClassName(String newSuperClassName) {
 
-        return constantPoolMethods = result;
     }
 
-    public synchronized void updateConstantFieldClassName(String originClassName, String newClassName) {
+    public void updateInterfaceName(String oldInterfaceName, String newInterfaceName) {
+
+    }
+
+    public void updateNameTypeAndClassInfo(String oldClassName, String newClassName) {
         CpInfo[] cpInfos = classFile.getConstantPool();
+        String slashOldClassName = oldClassName.replace(".", "/");
+        String slashNewClassName = newClassName.replace(".", "/");
+
         for (CpInfo cpInfo : cpInfos) {
-            if (cpInfo instanceof ConstantFieldInfo) {
-                ConstantFieldInfo constantFieldInfo = (ConstantFieldInfo) cpInfo;
-                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[constantFieldInfo.getClassIndex() - 1];
-                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[constantFieldInfo.getNameAndTypeIndex() - 1];
-                String t = "L" + originClassName.replace(".", "/") + ";";
-                String newType = "L" + newClassName.replace(".", "/") + ";";
-                int classNameIndex = constantClassInfo.getNameIndex();
+            if (cpInfo instanceof ConstantNameAndTypeInfo) {
+                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfo;
                 int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
-                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString().replace("/", ".");
-                String type = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
-                if (className.equals(getOriginClassName()) && type.equals(t)) {
-                    ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).update(newType);
+                ConstantUtf8Info constantUtf8Info = (ConstantUtf8Info) cpInfos[descriptorIndex - 1];
+                String s = constantUtf8Info.asString();
+                if (s.contains(slashOldClassName)) {
+                    constantUtf8Info.update(s.replace(slashOldClassName, slashNewClassName));
+                    modified = true;
+                }
+            } else if (cpInfo instanceof ConstantClassInfo) {
+                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfo;
+                ConstantUtf8Info constantUtf8Info = (ConstantUtf8Info) cpInfos[constantClassInfo.getNameIndex() - 1];
+                String s = constantUtf8Info.asString();
+                if (s.contains(slashOldClassName)) {
+                    constantUtf8Info.update(s.replace(slashOldClassName, slashNewClassName));
                     modified = true;
                 }
             }
         }
-    }
 
-    public synchronized void updateConstantMethodClassName(MethodInfo methodInfo, String newClassName) {
-        CpInfo[] cpInfos = classFile.getConstantPool();
-        for (CpInfo cpInfo : cpInfos) {
-            if (cpInfo instanceof ConstantMethodInfo) {
-                ConstantMethodInfo constantMethodInfo = (ConstantMethodInfo) cpInfo;
-                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[constantMethodInfo.getClassIndex() - 1];
-                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[constantMethodInfo.getNameAndTypeIndex() - 1];
-                int classNameIndex = constantClassInfo.getNameIndex();
-                int methodNameIndex = nameAndTypeInfo.getNameIndex();
-                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
-                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString().replace("/", ".");
-                String name = ((ConstantUtf8Info) cpInfos[methodNameIndex - 1]).asString();
-                String type = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
-                if (Objects.equals(className, methodInfo.getClassName()) &&
-                        Objects.equals(name, methodInfo.getName()) &&
-                        Objects.equals(type, methodInfo.getDescriptor())) {
-                    ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).update(newClassName.replace(".", "/"));
-                    modified = true;
-                    return;
-                }
+        // modify field
+        FieldInfo[] fields = classFile.getFields();
+        for (FieldInfo field : fields) {
+            ConstantUtf8Info constantUtf8Info = (ConstantUtf8Info) cpInfos[field.getDescriptorIndex().toInt() - 1];
+            String s = constantUtf8Info.asString();
+            if (s.contains(slashOldClassName)) {
+                constantUtf8Info.update(s.replace(slashOldClassName, slashNewClassName));
+                modified = true;
             }
+        }
+
+        // modify method params
+        io.frebel.bytecode.MethodInfo[] methods = classFile.getMethods();
+        for (io.frebel.bytecode.MethodInfo method : methods) {
+            ConstantUtf8Info constantUtf8Info = (ConstantUtf8Info) cpInfos[method.getDescriptorIndex() - 1];
+            String s = constantUtf8Info.asString();
+            if (s.contains(slashOldClassName)) {
+                constantUtf8Info.update(s.replace(slashOldClassName, slashNewClassName));
+                modified = true;
+            }
+        }
+
+        if (modified) {
+            getBytes();
         }
     }
 
@@ -236,6 +322,7 @@ public class ClassInner {
         this.originClassName = null;
         this.constantPoolMethods = null;
         this.constantPoolCount = null;
+        this.superClassName = null;
     }
 
     public boolean isModified() {

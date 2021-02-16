@@ -33,4 +33,8 @@ public class ClassAccessFlagsUtil {
                 :
                 flagBuilder.toString();
     }
+
+    public static boolean isPublic(int flag) {
+        return (flag & 0x0001) == 0x0001;
+    }
 }

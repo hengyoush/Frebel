@@ -19,4 +19,10 @@ public class FrebelClassRegistry {
         }
         return frebelClassMap.get(className);
     }
+
+    public static boolean isSameFrebelClass(String className1, String className2) {
+        FrebelClass frebelClass1 = getFrebelClass(className1);
+        FrebelClass frebelClass2 = getFrebelClass(className2);
+        return frebelClass2 != null && frebelClass1 == frebelClass2;
+    }
 }

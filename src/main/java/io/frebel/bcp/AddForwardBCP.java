@@ -1,10 +1,12 @@
 package io.frebel.bcp;
 
 import io.frebel.bytecode.FieldAccessFlagUtils;
+import io.frebel.util.Descriptor;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.CtPrimitiveType;
+import javassist.Modifier;
 
 import java.io.ByteArrayInputStream;
 
@@ -14,6 +16,9 @@ public class AddForwardBCP implements ByteCodeProcessor {
         ClassPool classPool = ClassPool.getDefault();
         try {
             CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(bytes), false);
+            if (ctClass.isInterface()) {
+                return bytes;
+            }
             // 增加forward处理
             CtMethod[] methods = ctClass.getMethods();
             boolean hasReturnType;
@@ -21,6 +26,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
             for (int i = 0; i < methods.length; i++) {
                 CtMethod method = methods[i];
                 if (FieldAccessFlagUtils.isPublic(method.getModifiers())
+                        && !Modifier.isAbstract(method.getModifiers())
                         // 支持native方法的转移？
                         && !FieldAccessFlagUtils.isNative(method.getModifiers())
                         && !method.getName().contains("_$fr$")) {
@@ -31,16 +37,15 @@ public class AddForwardBCP implements ByteCodeProcessor {
                     } else {
                         hasReturnType = returnType instanceof CtPrimitiveType || !returnType.getName().equals(Void.class.getName());
                     }
-
-                    hasArgs = method.getParameterTypes() != null && method.getParameterTypes().length > 0;
+                    String[] parameterNames = Descriptor.getParameterNames(method.getSignature());
+                    hasArgs = parameterNames != null && parameterNames.length > 0;
                     StringBuilder paramTypesBuilder = new StringBuilder();
-                    CtClass[] parameterTypes = method.getParameterTypes();
                     paramTypesBuilder.append("new Class[]{");
-                    for (int j = 0; hasArgs && j < parameterTypes.length; j++) {
+                    for (int j = 0; hasArgs && j < parameterNames.length; j++) {
                         if (j != 0) {
                             paramTypesBuilder.append(",");
                         }
-                        paramTypesBuilder.append(parameterTypes[j].getName()).append(".class");
+                        paramTypesBuilder.append(parameterNames[j]).append(".class");
                     }
                     paramTypesBuilder.append("}");
 
@@ -53,11 +58,11 @@ public class AddForwardBCP implements ByteCodeProcessor {
                     }
                     if (hasArgs) {
                         methodBuilder.append("io.frebel.FrebelRuntime.invokeWithParams(")
-                                .append(ctClass.getName()).append(".class,")
+//                                .append(ctClass.getName()).append(".class,")
                                 .append("\"").append(method.getName()).append("\"").append(",")
                                 .append("$0").append(",")
                                 .append("new Object[] {");
-                        int paramsNum = method.getParameterTypes().length;
+                        int paramsNum = parameterNames.length;
                         for (int j = 0; j < paramsNum; j++) {
                             if (j != 0) {
                                 methodBuilder.append(",");
@@ -69,7 +74,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
                                 .append(");");
                     } else {
                         methodBuilder.append("io.frebel.FrebelRuntime.invokeWithNoParams(")
-                                .append(ctClass.getName()).append(".class,")
+//                                .append(ctClass.getName()).append(".class,")
                                 .append("\"").append(method.getName()).append("\"").append(",")
                                 .append("$0").append(");");
                     }

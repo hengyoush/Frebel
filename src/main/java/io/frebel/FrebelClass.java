@@ -11,6 +11,9 @@ public class FrebelClass {
     private final ClassInner originClassInner;
     private ClassLoader classLoader;
 
+    // mutable
+    private String superClassName;
+
     public FrebelClass(byte[] originClassBytes, ClassLoader classLoader) {
         this.originClassBytes = originClassBytes;
         this.isReloaded = false;
@@ -20,9 +23,18 @@ public class FrebelClass {
             this.originClassInner = new ClassInner(originClassBytes);
             this.originName = originClassInner.getOriginClassName();
             this.versionClassMap.put(originClassInner.getOriginClassName(), originClassInner);
+            this.superClassName = originClassInner.getSuperClassName();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public void updateVersionClass(ClassInner classInner) {
+        if (!versionClassMap.containsKey(classInner.getOriginClassName())) {
+            throw new IllegalArgumentException("updateVersionClass error!");
+        }
+
+        versionClassMap.put(classInner.getOriginClassName(), classInner);
     }
 
     /**
@@ -34,6 +46,7 @@ public class FrebelClass {
         setReloaded(true);
         String className = classInner.getOriginClassName();
         versionClassMap.put(className, classInner);
+        this.superClassName = classInner.getSuperClassName();
     }
 
     public boolean isReloaded() {
@@ -62,5 +75,13 @@ public class FrebelClass {
 
     public synchronized void setReloaded(boolean reloaded) {
         isReloaded = reloaded;
+    }
+
+    public String getSuperClassName() {
+        return superClassName;
+    }
+
+    public String getOriginName() {
+        return originClassInner.getOriginClassName();
     }
 }
