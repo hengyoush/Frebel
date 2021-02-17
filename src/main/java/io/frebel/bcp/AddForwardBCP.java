@@ -29,6 +29,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
                         && !Modifier.isAbstract(method.getModifiers())
                         // 支持native方法的转移？
                         && !FieldAccessFlagUtils.isNative(method.getModifiers())
+                        && !Modifier.isStatic(method.getModifiers())
                         && !method.getName().contains("_$fr$")) {
 
                     CtClass returnType = method.getReturnType();
@@ -37,6 +38,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
                     } else {
                         hasReturnType = returnType instanceof CtPrimitiveType || !returnType.getName().equals(Void.class.getName());
                     }
+                    String returnTypeName = hasReturnType ? returnType.getName().replace("/", ".") : "void";
                     String[] parameterNames = Descriptor.getParameterNames(method.getSignature());
                     hasArgs = parameterNames != null && parameterNames.length > 0;
                     StringBuilder paramTypesBuilder = new StringBuilder();
@@ -49,16 +51,14 @@ public class AddForwardBCP implements ByteCodeProcessor {
                     }
                     paramTypesBuilder.append("}");
 
-                    String returnTypeName = returnType.getName();
                     StringBuilder methodBuilder = new StringBuilder();
                     methodBuilder.append("Object _$frl$Cur=io.frebel.FrebelRuntime.getCurrentVersion(this);");
-                    methodBuilder.append("if(_$frl$Cur!=this){");
+                    methodBuilder.append("if(_$frl$Cur!=$0){");
                     if (hasReturnType) {
                         methodBuilder.append("return (").append(returnTypeName).append(") ");
                     }
                     if (hasArgs) {
                         methodBuilder.append("io.frebel.FrebelRuntime.invokeWithParams(")
-//                                .append(ctClass.getName()).append(".class,")
                                 .append("\"").append(method.getName()).append("\"").append(",")
                                 .append("$0").append(",")
                                 .append("new Object[] {");
@@ -70,13 +70,15 @@ public class AddForwardBCP implements ByteCodeProcessor {
                             methodBuilder.append("$").append(j + 1);
                         }
                         methodBuilder.append("},")
-                                .append(paramTypesBuilder.toString())
+                                .append(paramTypesBuilder.toString()).append(",")
+                                .append("\"").append(returnTypeName).append("\"")
                                 .append(");");
                     } else {
                         methodBuilder.append("io.frebel.FrebelRuntime.invokeWithNoParams(")
-//                                .append(ctClass.getName()).append(".class,")
                                 .append("\"").append(method.getName()).append("\"").append(",")
-                                .append("$0").append(");");
+                                .append("$0").append(",")
+                                .append("\"").append(returnTypeName).append("\"")
+                                .append(");");
                     }
                     if (!hasReturnType) {
                         methodBuilder.append("return;");
@@ -85,6 +87,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
                     try {
                         method.insertBefore(methodBuilder.toString());
                     } catch (Exception e) {
+                        e.printStackTrace();
                         throw e;
                     }
                 }

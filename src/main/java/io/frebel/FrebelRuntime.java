@@ -85,15 +85,24 @@ public class FrebelRuntime {
         // TODO
     }
 
-    public static Object invokeConsWithNoParams(String className, String descriptor) {
+    public static Object invokeConsWithNoParams(String className, String descriptor, String returnTypeName) {
         className = className.replace("/", ".");
         FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);
         try {
             if (frebelClass != null) {
                 // reloaded
                 Object result = Class.forName(className).newInstance();
-                getCurrentVersion(result);
-                return result;
+                Object currentVersion = getCurrentVersion(result);
+                if (currentVersion.getClass().getName().contains("_$fr$_")) {
+                    if (isSameFrebelClass(result.getClass().getName(), returnTypeName)) {
+                        return getSpecificVersion(currentVersion, returnTypeName.replace("/", "."));
+                    } else {
+                        String matched = frebelClass.getMatchedClassNameByParentClassName(returnTypeName);
+                        return getSpecificVersion(currentVersion, matched);
+                    }
+                } else {
+                    return result;
+                }
             } else {
                 return Class.forName(className).newInstance();
             }
@@ -103,7 +112,7 @@ public class FrebelRuntime {
         }
     }
 
-    public static Object invokeConsWithParams(String className, String descriptor, Object[] args, Class[] argsType) {
+    public static Object invokeConsWithParams(String className, String descriptor, Object[] args, Class[] argsType, String returnTypeName) {
         className = className.replace("/", ".");
         FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);
         try {
@@ -137,14 +146,24 @@ public class FrebelRuntime {
                         }
                     }
                     if (retryFlag) {
-                        return invokeConsWithParams(className, descriptor, args, argsType);
+                        return invokeConsWithParams(className, descriptor, args, argsType, returnTypeName);
                     } else {
                         try {
-                            Object returnValue = matched.newInstance(newArgs);
-                            return getSpecificVersion(returnValue, className);
+                            Object result = matched.newInstance(newArgs);
+                            Object currentVersion = getCurrentVersion(result);
+                            if (currentVersion.getClass().getName().contains("_$fr$_")) {
+                                if (isSameFrebelClass(result.getClass().getName(), returnTypeName)) {
+                                    return getSpecificVersion(currentVersion, returnTypeName.replace("/", "."));
+                                } else {
+                                    String matchedClassName = frebelClass.getMatchedClassNameByParentClassName(returnTypeName);
+                                    return getSpecificVersion(currentVersion, matchedClassName);
+                                }
+                            } else {
+                                return result;
+                            }
                         } catch (IllegalArgumentException e) {
                             // args type problem, retry
-                            return invokeConsWithParams(className, descriptor, args, argsType);
+                            return invokeConsWithParams(className, descriptor, args, argsType, returnTypeName);
                         }
                     }
                 } else {
@@ -160,11 +179,11 @@ public class FrebelRuntime {
         }
     }
 
-    public static Object invokeWithNoParams(String methodName, Object invokeObj) {
-        return invokeWithNoParams(methodName, invokeObj, Reflection.getCallerClass(2));
+    public static Object invokeWithNoParams(String methodName, Object invokeObj, String returnTypeName) {
+        return invokeWithNoParams(methodName, invokeObj, Reflection.getCallerClass(2), returnTypeName);
     }
 
-    public static Object invokeWithNoParams(String methodName, Object invokeObj, Class callerClass) {
+    public static Object invokeWithNoParams(String methodName, Object invokeObj, Class callerClass, String returnTypeName) {
         try {
             try {
                 Object returnValue;
@@ -173,31 +192,37 @@ public class FrebelRuntime {
                 returnValue = method.invoke(currentVersion);
 
                 if (returnValue != null) {
-                    if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
+                    FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
+                    if (returnTypeName.equals("void")) {
+                        throw new IllegalStateException("expect null return value, but not null!");
+                    } else if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
                         return getSpecificVersion(returnValue, callerClass.getName());
-                    } else if (returnValue.getClass().getName().contains("_$fr$")){
-                        FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
-                        String originName = frebelClass.getOriginName();
-                        return getSpecificVersion(returnValue, originName);
+                    } else if (frebelClass != null){
+                        String matchedName = frebelClass.getMatchedClassNameByParentClassName(returnTypeName);
+                        return getSpecificVersion(returnValue, matchedName);
                     } else {
-                        return returnValue;
+                        if (Class.forName(returnTypeName.replace("/", ".")).isInstance(returnValue)) {
+                            return returnValue;
+                        } else {
+                            throw new IllegalStateException("error return value: " + returnTypeName + "," +
+                                    "real return value type is: " + returnValue.getClass());
+                        }
                     }
                 } else {
                     return returnValue;
                 }
             } catch (IllegalArgumentException e) {
                 // args type problem, retry
-                return invokeWithNoParams(methodName, invokeObj, callerClass);
+                return invokeWithNoParams(methodName, invokeObj, callerClass, returnTypeName);
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType) {
-        return invokeWithParams(methodName, invokeObj, args, argsType, Reflection.getCallerClass(2));
+    public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, String returnTypeName) {
+        return invokeWithParams(methodName, invokeObj, args, argsType, Reflection.getCallerClass(2), returnTypeName);
     }
-
 
     private static boolean isMatchedMethod(Class[] parameterTypes, Class[] argsType) {
         if (parameterTypes.length != argsType.length) {
@@ -220,7 +245,7 @@ public class FrebelRuntime {
         return find;
     }
 
-    public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, Class callerClass) {
+    public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, Class callerClass, String  returnTypeCastTo) {
         try {
             // 1. find matched method
             Object currentVersion = getCurrentVersion(invokeObj);
@@ -258,26 +283,33 @@ public class FrebelRuntime {
                     }
                 }
                 if (retryFlag) {
-                    return invokeWithParams(methodName, invokeObj, args, argsType, callerClass);
+                    return invokeWithParams(methodName, invokeObj, args, argsType, callerClass, returnTypeCastTo);
                 } else {
                     try {
                         Object returnValue = findMethod.invoke(currentVersion, newArgs);
                         if (returnValue != null) {
-                            if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
+                            FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
+                            if (returnTypeCastTo.equals("void")) {
+                                throw new IllegalStateException("expect null return value, but not null!");
+                            } else if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
                                 return getSpecificVersion(returnValue, callerClass.getName());
-                            } else if (returnValue.getClass().getName().contains("_$fr$")){
-                                FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
-                                String originName = frebelClass.getOriginName();
-                                return getSpecificVersion(returnValue, originName);
+                            } else if (frebelClass != null){
+                                String matchedName = frebelClass.getMatchedClassNameByParentClassName(returnTypeCastTo);
+                                return getSpecificVersion(returnValue, matchedName);
                             } else {
-                                return returnValue;
+                                if (Class.forName(returnTypeCastTo.replace("/", ".")).isInstance(returnValue)) {
+                                    return returnValue;
+                                } else {
+                                    throw new IllegalStateException("error return value: " + returnTypeCastTo + "," +
+                                            "real return value type is: " + returnValue.getClass());
+                                }
                             }
                         } else {
                             return returnValue;
                         }
                     } catch (IllegalArgumentException e) {
                         // args type problem, retry
-                        return invokeWithParams(methodName, invokeObj, args, argsType, callerClass);
+                        return invokeWithParams(methodName, invokeObj, args, argsType, callerClass, returnTypeCastTo);
                     }
                 }
             } else {
@@ -290,36 +322,36 @@ public class FrebelRuntime {
         }
     }
 
-    public static Object invokeWith0Params(Object target, String methodName, String descriptor) {
-        return invokeWithNoParams(methodName, target, Reflection.getCallerClass(2));
+    public static Object invokeWith0Params(Object target, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithNoParams(methodName, target, Reflection.getCallerClass(2), returnTypeCastTo);
     }
 
-    public static Object invokeWith1Params(Object target, Object arg1, String methodName, String descriptor) {
-        return invokeWithParams(methodName, target, new Object[]{arg1}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2));
+    public static Object invokeWith1Params(Object target, Object arg1, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
 
-    public static Object invokeWith2Params(Object target, Object arg1, Object arg2, String methodName, String descriptor) {
-        return invokeWithParams(methodName, target, new Object[]{arg1, arg2}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2));
+    public static Object invokeWith2Params(Object target, Object arg1, Object arg2, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
 
-    public static Object invokeWith3Params(Object target, Object arg1, Object arg2, Object arg3, String methodName, String descriptor) {
-        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2));
+    public static Object invokeWith3Params(Object target, Object arg1, Object arg2, Object arg3, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
 
-    public static Object invokeWith4Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, String methodName, String descriptor) {
-        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2));
+    public static Object invokeWith4Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
 
-    public static Object invokeWith5Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5, String methodName, String descriptor) {
-        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2));
+    public static Object invokeWith5Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
     /*********** constructor redirect methods *************/
-    public static Object invokeConsWith0Params(String className, String descriptor) {
-        return invokeConsWithNoParams(className, descriptor);
+    public static Object invokeConsWith0Params(String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithNoParams(className, descriptor, returnTypeCastTo);
     }
 
-    public static Object invokeConsWith1Params(Object arg1, String className, String descriptor) {
-        return invokeConsWithParams(className, descriptor, new Object[]{arg1}, getClassArrayFromDesc(descriptor));
+    public static Object invokeConsWith1Params(Object arg1, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
     }
 
     public static String getMethodName(int paramsNum) {

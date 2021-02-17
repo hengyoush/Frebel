@@ -510,6 +510,20 @@ public class Descriptor {
     }
 
     /**
+     * only support reference
+     * @param desc
+     * @return
+     */
+    public static String getFieldDescReferenceClassName(String desc) {
+        assert desc.startsWith("L");
+        desc = desc.substring(1);
+        assert desc.endsWith(";");
+        desc = desc.substring(0, desc.length() - 1);
+        desc = desc.replace("/", ".");
+        return desc;
+    }
+
+    /**
      * Returns the number of the prameters included in the given
      * descriptor.
      *

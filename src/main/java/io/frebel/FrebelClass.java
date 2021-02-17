@@ -1,5 +1,10 @@
 package io.frebel;
 
+import javassist.ClassPool;
+import javassist.CtClass;
+import javassist.NotFoundException;
+
+import java.util.Map;
 import java.util.TreeMap;
 
 public class FrebelClass {
@@ -83,5 +88,30 @@ public class FrebelClass {
 
     public String getOriginName() {
         return originClassInner.getOriginClassName();
+    }
+
+    public String getMatchedClassNameByParentClassName(String interfaceName) {
+        String findName = null;
+        interfaceName = interfaceName.replace("/", ".");
+        try {
+            CtClass ctClass = ClassPool.getDefault().get(interfaceName);
+            for (Map.Entry<String, ClassInner> entry : versionClassMap.entrySet()) {
+                ClassInner classInner = entry.getValue();
+                CtClass ctClass2 = ClassPool.getDefault().get(classInner.getOriginClassName());
+                if (ctClass2.subtypeOf(ctClass)) {
+                    findName = entry.getKey();
+                }
+            }
+
+            if (findName != null) {
+                return findName;
+            } else {
+                throw new IllegalStateException("can't find class has implements the interface: " + interfaceName +
+                        ",class name:" + originName);
+            }
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 }
