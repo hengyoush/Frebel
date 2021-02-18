@@ -88,8 +88,6 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         }
                         insnList.insert(insnNode.getPrevious(), il);
                         insnList.remove(insnNode);
-                        // we have pushed three value on the operand stack
-                        method.maxStack += 3;
                     } catch (Exception e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
@@ -144,14 +142,14 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         insnList.insert(insnNode.getPrevious(), il);
                         // remove origin invoke instruction
                         insnList.remove(insnNode);
-                        // we have pushed three value on the operand stack
-                        method.maxStack += 3;
                     } catch (Exception e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 }
             }
+            // we have pushed three value on the operand stack
+            method.maxStack += 3;
         }
         ClassWriter classWriter = new ClassWriter(0);
         cn.accept(classWriter);

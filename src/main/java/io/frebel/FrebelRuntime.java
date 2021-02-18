@@ -13,7 +13,6 @@ import java.util.Arrays;
 import java.util.Objects;
 
 import static io.frebel.FrebelClassRegistry.isSameFrebelClass;
-import static io.frebel.FrebelClassRegistry.register;
 
 public class FrebelRuntime {
     public static Object getCurrentVersion(Object obj) {
@@ -353,12 +352,12 @@ public class FrebelRuntime {
         return invokeConsWithParams(className, descriptor, new Object[]{arg1}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
     }
 
-    public static Object invokeGetField(Object target, String fieldName, String desc) {
-        return null;
+    public static Object invokeGetField(Object target, String owner, String fieldName, String desc) {
+        return invokeWithNoParams("_$fr$_$g$" + target, target, Reflection.getCallerClass(2), Descriptor.toClassName(desc));
     }
 
-    public static void invokeSetField(Object target, Object arg, String fieldName, String desc) {
-        return;
+    public static void invokeSetField(Object target, Object arg, String owner, String fieldName, String desc) {
+        invokeWithParams("_$fr$_$s$" + target, target, new Object[]{arg}, new Class[]{arg.getClass()}, Reflection.getCallerClass(2), Descriptor.toClassName(desc));
     }
 
     public static String getMethodName(int paramsNum) {
@@ -416,5 +415,13 @@ public class FrebelRuntime {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
+    }
+
+    public static String invokeGetFieldDesc() {
+        return "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;";
+    }
+
+    public static String invokeSetFieldDesc() {
+        return "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V";
     }
 }
