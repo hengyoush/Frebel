@@ -81,6 +81,8 @@ public class FrebelObjectManager {
     }
 
     public static void copyState(Object src, Object target) throws Exception {
+        Object latestVersionObject = getLatestVersionObject(target.getClass().getName(), getUid(src));
+        src = latestVersionObject == null ? src : latestVersionObject;
         Set<Field> srcFields = getAllFields(src);
         Set<Field> targetFields = getAllFields(target);
         for (Field srcField : srcFields) {
@@ -88,8 +90,7 @@ public class FrebelObjectManager {
                 if (srcField == targetField) {
                     targetField.set(target, srcField.get(src));
                     break;
-                } else if (srcField.getDeclaringClass() == targetField.getDeclaringClass() &&
-                        srcField.getName().equals(targetField.getName()) &&
+                } else if (srcField.getName().equals(targetField.getName()) &&
                         srcField.getType() == targetField.getType()) {
                     targetField.set(target, srcField.get(src));
                     break;
@@ -98,12 +99,28 @@ public class FrebelObjectManager {
         }
     }
 
+    private static Object getLatestVersionObject(String newClassName, String uid) {
+        FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(newClassName);
+        if (newClassName.contains("_$fr$")) {
+            int classIndex = Integer.parseInt(newClassName.substring(newClassName.lastIndexOf('_') + 1));
+            String previousClassName;
+            if (classIndex == 1) {
+                previousClassName = frebelClass.getOriginName();
+            } else {
+                previousClassName = newClassName.substring(0, newClassName.lastIndexOf('_') + 1) + (classIndex - 1);
+            }
+            return getSpecificVersionObject(uid, previousClassName);
+        } else {
+            throw new RuntimeException("class name must have _$fr$");
+        }
+    }
+
     public static void clearState(Object o) throws Exception {
         Set<Field> allFields = getAllFields(o);
         for (Field field : allFields) {
             if (field.getType().isPrimitive()) {
                 field.set(o, PrimitiveTypeUtil.getWrappedPrimitiveZeroValue(field.getType()));
-            } else {
+            } else if (!field.getName().equals("_$fr$_uid")) {
                 field.set(o, null);
             }
         }

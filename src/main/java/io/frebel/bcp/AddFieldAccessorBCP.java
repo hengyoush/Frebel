@@ -1,5 +1,6 @@
 package io.frebel.bcp;
 
+import io.frebel.util.PrimitiveTypeUtil;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
 import javassist.CtClass;
@@ -28,10 +29,15 @@ public class AddFieldAccessorBCP implements ByteCodeProcessor {
 
         CtField[] declaredFields = ctClass.getDeclaredFields();
         for (CtField declaredField : declaredFields) {
+            boolean isPrimitive = false;
             String fieldName = declaredField.getName();
             String filedTypeName;
             try {
                 filedTypeName = declaredField.getType().getName();
+                if (declaredField.getType().isPrimitive()) {
+                    filedTypeName = PrimitiveTypeUtil.getBoxedClass(filedTypeName).getName();
+                    isPrimitive = true;
+                }
             } catch (NotFoundException e) {
                 e.printStackTrace();
                 throw new RuntimeException(e);
@@ -41,15 +47,28 @@ public class AddFieldAccessorBCP implements ByteCodeProcessor {
             StringBuilder getBuilder = new StringBuilder();
             getBuilder.append("public ").append(filedTypeName)
                     .append(" _$fr$_$g$").append(fieldName)
-                    .append("()").append("{")
-                    .append("return $0.").append(fieldName).append(";")
-                    .append("}");
+                    .append("()").append("{");
+            if (isPrimitive) {
+                getBuilder.append("return ")
+                        .append(filedTypeName).append(".valueOf($0.").append(fieldName).append(")")
+                        .append(";");
+            } else {
+                getBuilder.append("return $0.").append(fieldName).append(";");
+            }
+            getBuilder.append("}");
 
             // add set method
             StringBuilder setBuilder = new StringBuilder();
             setBuilder.append("public void ").append("_$fr$_$s$").append(fieldName)
                     .append("(").append(filedTypeName).append(" o").append(")")
-                    .append("{").append("$0.").append(fieldName).append("=o;").append("}");
+                    .append("{").append("$0.").append(fieldName).append("=");
+            if (isPrimitive) {
+                setBuilder.append("o." + PrimitiveTypeUtil.getPrimitiveClassNameFromBoxClass(filedTypeName))
+                        .append("Value();");
+            } else {
+                setBuilder.append("o;");
+            }
+            setBuilder.append("}");
 
             try {
                 ctClass.addMethod(CtMethod.make(getBuilder.toString(), ctClass));

@@ -2,8 +2,19 @@ package io.frebel.util;
 
 import javassist.ClassPool;
 import javassist.CtMethod;
+import javassist.NotFoundException;
 
 public class PrimitiveTypeUtil {
+
+    public static boolean isPrimitive(String className) {
+        try {
+            return ClassPool.getDefault().get(className).isPrimitive();
+        } catch (NotFoundException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
     public static Class getBoxedClass(String primitiveClassName) {
         switch (primitiveClassName) {
             case "boolean": {
@@ -27,6 +38,9 @@ public class PrimitiveTypeUtil {
             case "double": {
                 return Double.class;
             }
+            case "char": {
+                return Character.class;
+            }
             default: {
                 throw new IllegalArgumentException();
             }
@@ -43,16 +57,48 @@ public class PrimitiveTypeUtil {
         }
     }
 
+    public static String getPrimitiveClassNameFromBoxClass(String boxClassName) {
+        switch (boxClassName) {
+            case ("java.lang.Integer"): {
+                return "int";
+            }
+            case ("java.lang.Boolean"): {
+                return "boolean";
+            }
+            case ("java.lang.Byte"): {
+                return "byte";
+            }
+            case ("java.lang.Short"): {
+                return "short";
+            }
+            case ("java.lang.Long"): {
+                return "long";
+            }
+            case ("java.lang.Double"): {
+                return "double";
+            }
+            case ("java.lang.Float"): {
+                return "float";
+            }
+            case ("java.lang.Character"): {
+                return "char";
+            }
+            default:{
+                throw new IllegalArgumentException();
+            }
+        }
+    }
+
     public static Object getWrappedPrimitiveZeroValue(Class c) {
         switch (c.getName()) {
             case "boolean": {
                 return Boolean.FALSE;
             }
             case "byte": {
-                return (byte)0;
+                return (byte) 0;
             }
             case "short": {
-                return (short)0;
+                return (short) 0;
             }
             case "int": {
                 return 0;

@@ -9,6 +9,7 @@ import io.frebel.bcp.AddFieldAccessorBCP;
 import io.frebel.bcp.AddForwardBCP;
 import io.frebel.bcp.AddUidBCP;
 import io.frebel.bcp.ByteCodeProcessor;
+import io.frebel.bcp.FieldRedirectBCP;
 import io.frebel.bcp.MethodRedirectBCP;
 import io.frebel.bcp.RenameBCP;
 import javassist.ClassPool;
@@ -20,6 +21,7 @@ import javassist.NotFoundException;
 
 import java.io.ByteArrayInputStream;
 import java.lang.instrument.ClassDefinition;
+import java.lang.instrument.UnmodifiableClassException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -35,6 +37,7 @@ public enum ReloadManager {
     private ByteCodeProcessor uidBCP = new AddUidBCP();
     private ByteCodeProcessor redirectBCP = new MethodRedirectBCP();
     private ByteCodeProcessor addFieldAccessorBCP = new AddFieldAccessorBCP();
+    private ByteCodeProcessor fieldRedirectBCP = new FieldRedirectBCP();
 
     public ClassInner reloadForAddForwardDelayed(ClassInner classInner) {
         try {
@@ -70,6 +73,9 @@ public enum ReloadManager {
             byte[] bytes = ctClass.toBytecode();
 
             processed = addForward.process(classPool.getClassLoader(), bytes);
+            if (FrebelProps.debugClassFile()) {
+                classPool.makeClass(new ByteArrayInputStream(processed), false).debugWriteFile("./");
+            }
 
             frebelClass = new FrebelClass(processed, classPool.getClassLoader());
             FrebelClassRegistry.register(className, frebelClass);
@@ -78,9 +84,11 @@ public enum ReloadManager {
         // modify
         byte[] bytes = classInner.getBytes();
         bytes = renameBCP.process(frebelClass.getClassLoader(), bytes);
+        bytes = addFieldAccessorBCP.process(frebelClass.getClassLoader(), bytes);
         if (!addForwardDelayed) {
             bytes = addForward.process(frebelClass.getClassLoader(), bytes);
         }
+        bytes = fieldRedirectBCP.process(frebelClass.getClassLoader(), bytes);
         bytes = redirectBCP.process(frebelClass.getClassLoader(), bytes);
         bytes = uidBCP.process(frebelClass.getClassLoader(), bytes);
         ClassInner newClassInner = new ClassInner(bytes);
@@ -92,7 +100,13 @@ public enum ReloadManager {
         ctClass.toClass();
         // redefine old class, add Forward
         if (redefineFlag) {
-            FrebelJVM.getInstrumentation().redefineClasses(new ClassDefinition(Class.forName(className), processed));
+            try {
+                FrebelJVM.getInstrumentation().redefineClasses(new ClassDefinition(Class.forName(className), processed));
+            } catch (Throwable e) {
+                e.printStackTrace();
+                System.out.println("class redefine error, class: " + className);
+                throw new RuntimeException(e);
+            }
         }
 
         if (updateClassVersion) {
