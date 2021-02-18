@@ -2,7 +2,6 @@ package io.frebel.util;
 
 import javassist.ClassPool;
 import javassist.CtMethod;
-import javassist.NotFoundException;
 
 public class PrimitiveTypeUtil {
     public static Class getBoxedClass(String primitiveClassName) {
@@ -36,11 +35,40 @@ public class PrimitiveTypeUtil {
 
     public static String getUnBoxedMethodSignature(String primitiveClassName, String methodName) {
         try {
-            CtMethod method = ClassPool.getDefault().get(primitiveClassName).getDeclaredMethod(methodName);
+            CtMethod method = ClassPool.getDefault().get(primitiveClassName.replace("/", ".")).getDeclaredMethod(methodName);
             return method.getSignature();
-        } catch (NotFoundException e) {
+        } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
+        }
+    }
+
+    public static Object getWrappedPrimitiveZeroValue(Class c) {
+        switch (c.getName()) {
+            case "boolean": {
+                return Boolean.FALSE;
+            }
+            case "byte": {
+                return (byte)0;
+            }
+            case "short": {
+                return (short)0;
+            }
+            case "int": {
+                return 0;
+            }
+            case "long": {
+                return 0L;
+            }
+            case "float": {
+                return 0f;
+            }
+            case "double": {
+                return 0.0;
+            }
+            default: {
+                throw new IllegalArgumentException();
+            }
         }
     }
 }

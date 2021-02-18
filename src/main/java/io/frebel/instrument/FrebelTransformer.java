@@ -2,9 +2,10 @@ package io.frebel.instrument;
 
 import io.frebel.FrebelClass;
 import io.frebel.FrebelClassRegistry;
+import io.frebel.bcp.AddFieldAccessorBCP;
 import io.frebel.bcp.AddUidBCP;
 import io.frebel.bcp.ByteCodeProcessor;
-import io.frebel.bcp.RedirectToFrebelBCP;
+import io.frebel.bcp.MethodRedirectBCP;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -12,7 +13,7 @@ import java.security.ProtectionDomain;
 
 public class FrebelTransformer implements ClassFileTransformer {
     private ByteCodeProcessor addUidBCP = new AddUidBCP();
-    private ByteCodeProcessor redirectBCP = new RedirectToFrebelBCP();
+    private ByteCodeProcessor addFieldAccessorBCP = new AddFieldAccessorBCP();
 
     @Override
     public byte[] transform(ClassLoader loader,
@@ -27,8 +28,8 @@ public class FrebelTransformer implements ClassFileTransformer {
             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);
             if (frebelClass == null) {
                 // 初次加载类只增加uid and redirect
-                byte[] processed = addUidBCP.process(loader, classfileBuffer);
-//                return redirectBCP.process(loader, processed);
+                byte[] processed = addFieldAccessorBCP.process(loader, classfileBuffer);
+                processed = addUidBCP.process(loader, processed);
                 return processed;
             } else {
                 return classfileBuffer;

@@ -8,12 +8,12 @@ import javassist.NotFoundException;
 import sun.reflect.Reflection;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
 
 import static io.frebel.FrebelClassRegistry.isSameFrebelClass;
+import static io.frebel.FrebelClassRegistry.register;
 
 public class FrebelRuntime {
     public static Object getCurrentVersion(Object obj) {
@@ -26,20 +26,31 @@ public class FrebelRuntime {
             }
             String uid = (String) method.invoke(obj);
             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(obj.getClass().getName());
-            Object currentVersion = FrebelObjectManager.getSpecificVersionObject(uid, frebelClass.getCurrentVersionClassName());
+            String currentVersionClassName = frebelClass.getCurrentVersionClassName();
+            Object currentVersion = FrebelObjectManager.getSpecificVersionObject(uid, currentVersionClassName);
             if (currentVersion == null) {
                 currentVersion = obj;
             }
             if (frebelClass.isReloaded()) {
-                String newestClassName = frebelClass.getCurrentVersionClassName();
-                if (!Objects.equals(currentVersion.getClass().getName(), newestClassName)) {
-                    // 创建新对象 && 状态拷贝
-                    Object newClassInstance = Class.forName(newestClassName).newInstance();
-                    copyState(currentVersion, newClassInstance);
-                    // 注册新对象
-                    FrebelObjectManager.register(uid, newClassInstance);
-                    clearState(currentVersion);
-                    return newClassInstance;
+                if (!Objects.equals(currentVersion.getClass().getName(), currentVersionClassName)) {
+                    synchronized (obj) {
+                        currentVersionClassName = frebelClass.getCurrentVersionClassName();
+                        currentVersion = FrebelObjectManager.getSpecificVersionObject(uid, currentVersionClassName);
+                        if (currentVersion == null) {
+                            currentVersion = obj;
+                        }
+                        if (!Objects.equals(currentVersion.getClass().getName(), currentVersionClassName)) {
+                            // 创建新对象 && 状态拷贝
+                            Object newClassInstance = FrebelObjectManager.createUninitializedObject(Class.forName(currentVersionClassName));
+                            FrebelObjectManager.copyState(currentVersion, newClassInstance);
+                            // 注册新对象
+                            FrebelObjectManager.register(uid, newClassInstance);
+                            FrebelObjectManager.clearState(currentVersion);
+                            return newClassInstance;
+                        } else {
+                            return currentVersion;
+                        }
+                    }
                 } else {
                     return currentVersion;
                 }
@@ -67,22 +78,6 @@ public class FrebelRuntime {
             e.printStackTrace();
             return obj;
         }
-    }
-
-    private static void copyState(Object srcObj, Object targetObj) {
-        try {
-            Method method = srcObj.getClass().getMethod("_$fr$_getUid");
-            Object uuid = method.invoke(srcObj);
-            Field fr$_uid = targetObj.getClass().getDeclaredField("_$fr$_uid");
-            fr$_uid.setAccessible(true);
-            fr$_uid.set(targetObj, uuid);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    private static void clearState(Object object) {
-        // TODO
     }
 
     public static Object invokeConsWithNoParams(String className, String descriptor, String returnTypeName) {
@@ -140,6 +135,7 @@ public class FrebelRuntime {
                                 // retry because between 1 and 2 args class has benn reloaded,
                                 // so the class version has been outdated
                                 retryFlag = true;
+                                break;
                             } else {
                                 newArgs[i] = newArg;
                             }
@@ -197,7 +193,7 @@ public class FrebelRuntime {
                         throw new IllegalStateException("expect null return value, but not null!");
                     } else if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
                         return getSpecificVersion(returnValue, callerClass.getName());
-                    } else if (frebelClass != null){
+                    } else if (frebelClass != null) {
                         String matchedName = frebelClass.getMatchedClassNameByParentClassName(returnTypeName);
                         return getSpecificVersion(returnValue, matchedName);
                     } else {
@@ -245,11 +241,11 @@ public class FrebelRuntime {
         return find;
     }
 
-    public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, Class callerClass, String  returnTypeCastTo) {
+    public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, Class callerClass, String returnTypeCastTo) {
         try {
             // 1. find matched method
             Object currentVersion = getCurrentVersion(invokeObj);
-            Method[] methods = currentVersion.getClass().getMethods();
+            Method[] methods = currentVersion.getClass().getDeclaredMethods();
             Method findMethod = null;
             for (Method method : methods) {
                 if (!method.getName().equals(methodName)) {
@@ -277,6 +273,7 @@ public class FrebelRuntime {
                             // retry because between 1 and 2 args class has benn reloaded,
                             // so the class version has been outdated
                             retryFlag = true;
+                            break;
                         } else {
                             newArgs[i] = newArg;
                         }
@@ -286,6 +283,7 @@ public class FrebelRuntime {
                     return invokeWithParams(methodName, invokeObj, args, argsType, callerClass, returnTypeCastTo);
                 } else {
                     try {
+                        findMethod.setAccessible(true);
                         Object returnValue = findMethod.invoke(currentVersion, newArgs);
                         if (returnValue != null) {
                             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
@@ -293,7 +291,7 @@ public class FrebelRuntime {
                                 throw new IllegalStateException("expect null return value, but not null!");
                             } else if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
                                 return getSpecificVersion(returnValue, callerClass.getName());
-                            } else if (frebelClass != null){
+                            } else if (frebelClass != null) {
                                 String matchedName = frebelClass.getMatchedClassNameByParentClassName(returnTypeCastTo);
                                 return getSpecificVersion(returnValue, matchedName);
                             } else {
@@ -345,6 +343,7 @@ public class FrebelRuntime {
     public static Object invokeWith5Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5, String methodName, String descriptor, String returnTypeCastTo) {
         return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
+
     /*********** constructor redirect methods *************/
     public static Object invokeConsWith0Params(String className, String descriptor, String returnTypeCastTo) {
         return invokeConsWithNoParams(className, descriptor, returnTypeCastTo);
@@ -352,6 +351,14 @@ public class FrebelRuntime {
 
     public static Object invokeConsWith1Params(Object arg1, String className, String descriptor, String returnTypeCastTo) {
         return invokeConsWithParams(className, descriptor, new Object[]{arg1}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeGetField(Object target, String fieldName, String desc) {
+        return null;
+    }
+
+    public static void invokeSetField(Object target, Object arg, String fieldName, String desc) {
+        return;
     }
 
     public static String getMethodName(int paramsNum) {
@@ -373,7 +380,6 @@ public class FrebelRuntime {
             throw new RuntimeException(e);
         }
     }
-
 
     public static String getConsMethodName(int paramsNum) {
         return "invokeConsWith" + paramsNum + "Params";

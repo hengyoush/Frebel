@@ -29,8 +29,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
                         && !Modifier.isAbstract(method.getModifiers())
                         // 支持native方法的转移？
                         && !FieldAccessFlagUtils.isNative(method.getModifiers())
-                        && !Modifier.isStatic(method.getModifiers())
-                        && !method.getName().contains("_$fr$")) {
+                        && !Modifier.isStatic(method.getModifiers())) {
 
                     CtClass returnType = method.getReturnType();
                     if ("void".equals(returnType.getName())) {

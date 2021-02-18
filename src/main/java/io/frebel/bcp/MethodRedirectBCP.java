@@ -39,7 +39,7 @@ import static jdk.internal.org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 import static jdk.internal.org.objectweb.asm.Opcodes.NEW;
 import static jdk.internal.org.objectweb.asm.Opcodes.PUTFIELD;
 
-public class RedirectToFrebelBCP implements ByteCodeProcessor {
+public class MethodRedirectBCP implements ByteCodeProcessor {
     @Override
     public byte[] process(ClassLoader classLoader, byte[] bytes) {
         ClassNode cn = new ClassNode(ASM4);
@@ -60,7 +60,7 @@ public class RedirectToFrebelBCP implements ByteCodeProcessor {
             while (iterator.hasNext()) {
                 AbstractInsnNode insnNode = iterator.next();
                 int opcode = insnNode.getOpcode();
-                if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) { // TODO invokeinterface
+                if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) {
                     try {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) insnNode;
                         if (skip(methodInsnNode)) { // skip frebel-generate method call
@@ -142,10 +142,10 @@ public class RedirectToFrebelBCP implements ByteCodeProcessor {
                             }
                         }
                         insnList.insert(insnNode.getPrevious(), il);
-                        // remove invokespecial
+                        // remove origin invoke instruction
                         insnList.remove(insnNode);
-                        // we have pushed two value on the operand stack
-                        method.maxStack += 2;
+                        // we have pushed three value on the operand stack
+                        method.maxStack += 3;
                     } catch (Exception e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
