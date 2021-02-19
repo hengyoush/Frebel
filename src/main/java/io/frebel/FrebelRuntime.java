@@ -220,7 +220,6 @@ public class FrebelRuntime {
     }
 
 
-
     private static boolean isMatchedMethod(Class[] parameterTypes, Class[] argsType) {
         if (parameterTypes.length != argsType.length) {
             return false;
@@ -232,6 +231,8 @@ public class FrebelRuntime {
             if (parameterType.getName().equals(aClass.getName())) {
                 continue;
             } else if (isSameFrebelClass(aClass.getName(), parameterType.getName())) {
+                continue;
+            } else if (parameterType.isAssignableFrom(aClass)) {
                 continue;
             } else {
                 find = false;
@@ -266,21 +267,20 @@ public class FrebelRuntime {
             if (findMethod != null) {
                 Class<?>[] parameterTypes = findMethod.getParameterTypes();
                 for (int i = 0; i < parameterTypes.length; i++) {
-                    if (parameterTypes[i].getName().equals(argsType[i].getName())) {
+                    if (parameterTypes[i].isAssignableFrom(argsType[i])) {
                         newArgs[i] = args[i];
                     } else if (isSameFrebelClass(parameterTypes[i].getName(), argsType[i].getName())) {
-                        Object newArg = getCurrentVersion(args[i]);
-                        if (newArg.getClass() != parameterTypes[i]) {
-                            // retry because between 1 and 2 args class has benn reloaded,
-                            // so the class version has been outdated
-                            retryFlag = true;
-                            break;
-                        } else {
-                            newArgs[i] = newArg;
-                        }
+                        newArgs[i] = args[i] == null ? null : getSpecificVersion(getCurrentVersion(args[i]), parameterTypes[i].getName());
+                    } else {
+                        // retry because between 1 and 2 args class has benn reloaded,
+                        // so the class version has been outdated
+                        retryFlag = true;
+                        break;
                     }
                 }
                 if (retryFlag) {
+                    System.out.printf("retry methodName: %s, invokeObjClass: %s, argsType: %s\n", methodName,
+                            invokeObj.getClass().getName(), Arrays.toString(argsType));
                     return invokeWithParams(methodName, invokeObj, args, argsType, callerClass, returnTypeCastTo);
                 } else {
                     try {
@@ -324,56 +324,6 @@ public class FrebelRuntime {
     public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, String returnTypeName) {
         return invokeWithParams(methodName, invokeObj, args, argsType, Reflection.getCallerClass(2), returnTypeName);
     }
-    public static Object invokeWithParams(String methodName, Object invokeObj, int[] args, Class<?>[] argsType, String returnTypeName) {
-        Integer[] box = new Integer[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-    public static Object invokeWithParams(String methodName, Object invokeObj, boolean[] args, Class<?>[] argsType, String returnTypeName) {
-        Boolean[] box = new Boolean[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-    public static Object invokeWithParams(String methodName, Object invokeObj, byte[] args, Class<?>[] argsType, String returnTypeName) {
-        Byte[] box = new Byte[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-    public static Object invokeWithParams(String methodName, Object invokeObj, short[] args, Class<?>[] argsType, String returnTypeName) {
-        Short[] box = new Short[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-    public static Object invokeWithParams(String methodName, Object invokeObj, long[] args, Class<?>[] argsType, String returnTypeName) {
-        Long[] box = new Long[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-    public static Object invokeWithParams(String methodName, Object invokeObj, double[] args, Class<?>[] argsType, String returnTypeName) {
-        Double[] box = new Double[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-    public static Object invokeWithParams(String methodName, Object invokeObj, float[] args, Class<?>[] argsType, String returnTypeName) {
-        Float[] box = new Float[args.length];
-        for (int i = 0; i < args.length; i++) {
-            box[i] = args[i];
-        }
-        return invokeWithParams(methodName, invokeObj, box, argsType, Reflection.getCallerClass(2), returnTypeName);
-    }
-
 
     public static Object invokeWith0Params(Object target, String methodName, String descriptor, String returnTypeCastTo) {
         return invokeWithNoParams(methodName, target, Reflection.getCallerClass(2), returnTypeCastTo);
@@ -419,22 +369,32 @@ public class FrebelRuntime {
     public static void invokeSetField(Object target, int arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Integer.class}, Reflection.getCallerClass(2), className);
     }
+
     public static void invokeSetField(Object target, byte arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Byte.class}, Reflection.getCallerClass(2), className);
     }
+
     public static void invokeSetField(Object target, short arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Short.class}, Reflection.getCallerClass(2), className);
     }
+
     public static void invokeSetField(Object target, boolean arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Boolean.class}, Reflection.getCallerClass(2), className);
     }
+
     public static void invokeSetField(Object target, long arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Long.class}, Reflection.getCallerClass(2), className);
     }
+
     public static void invokeSetField(Object target, double arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Double.class}, Reflection.getCallerClass(2), className);
     }
+
     public static void invokeSetField(Object target, float arg, String owner, String fieldName, String className) {
+        invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Float.class}, Reflection.getCallerClass(2), className);
+    }
+
+    public static void invokeSetField(Object target, char arg, String owner, String fieldName, String className) {
         invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Float.class}, Reflection.getCallerClass(2), className);
     }
 

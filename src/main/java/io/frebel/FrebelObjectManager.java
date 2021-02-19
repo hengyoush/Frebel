@@ -11,13 +11,39 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
-// TODO clean
 public class FrebelObjectManager {
     private static Map<String/* className */, Map<String, WeakReference<Object>>> objectMap = new ConcurrentHashMap<>();
+    private static ScheduledExecutorService cleanThreadPool = Executors.newScheduledThreadPool(1);
+    static {
+        cleanThreadPool.scheduleWithFixedDelay(new Runnable() {
+            @Override
+            public void run() {
+                Iterator<Map<String, WeakReference<Object>>> iterator = objectMap.values().iterator();
+                while (iterator.hasNext()) {
+                    Map<String, WeakReference<Object>> map = iterator.next();
+                    Iterator<Map.Entry<String, WeakReference<Object>>> it = map.entrySet().iterator();
+                    while (it.hasNext()) {
+                        Map.Entry<String, WeakReference<Object>> entry = it.next();
+                        if (entry.getValue() == null) {
+                            it.remove();
+                        }
+                    }
+                    if (map.isEmpty()) {
+                        iterator.remove();
+                    }
+                }
+            }
+        }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+    }
 
     public static void register(String uuid, Object o) {
         Map<String, WeakReference<Object>> map = objectMap.get(uuid);
@@ -41,7 +67,7 @@ public class FrebelObjectManager {
         try {
             String uid = getUid(src);
             Map<String, WeakReference<Object>> treeMap = objectMap.get(uid);
-            Object newInstance = Class.forName(className).newInstance();
+            Object newInstance = FrebelUnsafe.getUnsafe().allocateInstance(Class.forName(className));
             Field fr$_uid = newInstance.getClass().getDeclaredField("_$fr$_uid");
             fr$_uid.setAccessible(true);
             fr$_uid.set(newInstance, uid);
@@ -100,15 +126,8 @@ public class FrebelObjectManager {
     }
 
     private static Object getLatestVersionObject(String newClassName, String uid) {
-        FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(newClassName);
         if (newClassName.contains("_$fr$")) {
-            int classIndex = Integer.parseInt(newClassName.substring(newClassName.lastIndexOf('_') + 1));
-            String previousClassName;
-            if (classIndex == 1) {
-                previousClassName = frebelClass.getOriginName();
-            } else {
-                previousClassName = newClassName.substring(0, newClassName.lastIndexOf('_') + 1) + (classIndex - 1);
-            }
+            String previousClassName = FrebelClass.getPreviousClassName(newClassName);
             return getSpecificVersionObject(uid, previousClassName);
         } else {
             throw new RuntimeException("class name must have _$fr$");

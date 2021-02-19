@@ -26,7 +26,7 @@ public class AddUidBCP implements ByteCodeProcessor {
             ctClass.addMethod(CtMethod.make("public String _$fr$_getUid() {return this._$fr$_uid;}", ctClass));
             CtConstructor[] constructors = ctClass.getConstructors();
             for (CtConstructor constructor : constructors) {
-//                constructor.insertAfter("if(!this.getClass().getName().contains(\"_$fr$\"))io.frebel.FrebelObjectManager.register(_$fr$_getUid(),$0);", false);
+                constructor.insertAfter("if(!this.getClass().getName().contains(\"_$fr$\"))io.frebel.FrebelObjectManager.register(_$fr$_getUid(),$0);", false);
             }
             return ctClass.toBytecode();
         } catch (Exception e) {

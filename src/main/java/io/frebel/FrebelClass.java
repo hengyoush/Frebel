@@ -114,4 +114,16 @@ public class FrebelClass {
             throw new RuntimeException(e);
         }
     }
+
+    public static String getPreviousClassName(String className) {
+        FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);
+        int classIndex = Integer.parseInt(className.substring(className.lastIndexOf('_') + 1));
+        String previousClassName;
+        if (classIndex == 1) {
+            previousClassName = frebelClass.getOriginName();
+        } else {
+            previousClassName = className.substring(0, className.lastIndexOf('_') + 1) + (classIndex - 1);
+        }
+        return previousClassName;
+    }
 }

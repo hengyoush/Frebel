@@ -6,6 +6,7 @@ import io.frebel.bcp.AddFieldAccessorBCP;
 import io.frebel.bcp.AddUidBCP;
 import io.frebel.bcp.ByteCodeProcessor;
 import io.frebel.bcp.MethodRedirectBCP;
+import io.frebel.util.ClassUtils;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
@@ -22,7 +23,8 @@ public class FrebelTransformer implements ClassFileTransformer {
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) throws IllegalClassFormatException {
         try {
-            if (loader == null || className.contains("_$fr$") || className.startsWith("io/frebel") || className.startsWith("java") || className.startsWith("sun")) {
+            if (loader == null || className.contains("_$fr$") || className.startsWith("io/frebel") || className.startsWith("java") || className.startsWith("sun")
+                    ) {
                 return classfileBuffer;
             }
             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);

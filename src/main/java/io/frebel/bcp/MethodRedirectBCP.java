@@ -190,7 +190,7 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
         } else {
             // has returnType
             if (isPrimitive) {
-                returnValueCastTo = "null";
+                returnValueCastTo = PrimitiveTypeUtil.getBoxedClass(returnTypeName).getName();
             } else {
                 AbstractInsnNode next = methodInsnNode.getNext();
                 if (next instanceof FieldInsnNode) {

@@ -79,7 +79,11 @@ public enum ReloadManager {
 
             frebelClass = new FrebelClass(processed, classPool.getClassLoader());
             FrebelClassRegistry.register(className, frebelClass);
-            redefineFlag = true;
+            if (!ctClass.isInterface() && !ctClass.isAnnotation()) {
+                redefineFlag = true;
+            } else {
+                redefineFlag = false;
+            }
         }
         // modify
         byte[] bytes = classInner.getBytes();
