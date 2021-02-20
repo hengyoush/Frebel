@@ -39,10 +39,4 @@ public class ClassFileAnalysis {
         }
         return classFile;
     }
-
-    public static void main(String[] args) throws Exception {
-        byte[] bytes = Files.readAllBytes(Paths.get("/Users/hengyouhai/workspace/git/frebelcore/target/classes/io/frebel/bytecode/ClassAccessFlagsUtil.class"));
-        ClassFile classFile = ClassFileAnalysis.analysis(bytes);
-        System.out.println(classFile);
-    }
 }
