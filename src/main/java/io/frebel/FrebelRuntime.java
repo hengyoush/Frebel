@@ -64,6 +64,9 @@ public class FrebelRuntime {
         } catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
+        } catch (NoClassDefFoundError e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
 
@@ -321,6 +324,54 @@ public class FrebelRuntime {
         }
     }
 
+    public static Object invokeCast(Object toCast, String className) {
+        FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(toCast.getClass().getName());
+        if (frebelClass != null) {
+            try {
+                String matched = frebelClass.getMatchedClassNameByParentClassName(className);
+                toCast = getSpecificVersion(toCast, matched);
+            } catch (IllegalStateException e) {
+                e.printStackTrace();
+                throw new ClassCastException("Cannot cast " + frebelClass.getOriginName() + " to " + className);
+            }
+        }
+        try {
+            Class<?> cls = Class.forName(className);
+            return cls.cast(toCast);
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        } catch (ClassCastException e) {
+            throw e;
+        }
+    }
+
+    public static int invokeInstanceOf(Object toCast, String className) {
+        if (toCast == null) {
+            return 0;
+        }
+        FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(toCast.getClass().getName());
+        if (frebelClass != null) {
+            try {
+                String matched = frebelClass.getMatchedClassNameByParentClassName(className);
+                toCast = getSpecificVersion(toCast, matched);
+            } catch (IllegalStateException e) {
+                e.printStackTrace();
+                return 0;
+            }
+        }
+        try {
+            Class<?> cls = Class.forName(className);
+            cls.cast(toCast);
+            return 1;
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+            return 0;
+        } catch (ClassCastException e) {
+            return 0;
+        }
+    }
+
     public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, String returnTypeName) {
         return invokeWithParams(methodName, invokeObj, args, argsType, Reflection.getCallerClass(2), returnTypeName);
     }
@@ -466,5 +517,13 @@ public class FrebelRuntime {
         } else {
             return "(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V";
         }
+    }
+
+    public static String invokeCastDesc() {
+        return "(Ljava/lang/Object;Ljava/lang/String;)Ljava/lang/Object;";
+    }
+
+    public static String invokeInstanceOfDesc() {
+        return "(Ljava/lang/Object;Ljava/lang/String;)I";
     }
 }

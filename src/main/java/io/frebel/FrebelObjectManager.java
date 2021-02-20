@@ -48,7 +48,7 @@ public class FrebelObjectManager {
     public static void register(String uuid, Object o) {
         Map<String, WeakReference<Object>> map = objectMap.get(uuid);
         if (map == null) {
-            objectMap.put(uuid, new ConcurrentHashMap<String, WeakReference<Object>>());
+            objectMap.put(uuid, new ConcurrentHashMap<>());
             map = objectMap.get(uuid);
         }
         map.put(o.getClass().getName(), new WeakReference<>(o));
@@ -72,7 +72,7 @@ public class FrebelObjectManager {
             fr$_uid.setAccessible(true);
             fr$_uid.set(newInstance, uid);
             if (treeMap == null) {
-                objectMap.put(uid, new HashMap<String, WeakReference<Object>>());
+                objectMap.put(uid, new HashMap<>());
                 treeMap = objectMap.get(uid);
             }
             treeMap.put(className, new WeakReference<>(newInstance));

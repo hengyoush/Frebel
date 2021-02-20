@@ -5,13 +5,7 @@ import io.frebel.FrebelClass;
 import io.frebel.FrebelClassRegistry;
 import io.frebel.FrebelJVM;
 import io.frebel.FrebelProps;
-import io.frebel.bcp.AddFieldAccessorBCP;
-import io.frebel.bcp.AddForwardBCP;
-import io.frebel.bcp.AddUidBCP;
-import io.frebel.bcp.ByteCodeProcessor;
-import io.frebel.bcp.FieldRedirectBCP;
-import io.frebel.bcp.MethodRedirectBCP;
-import io.frebel.bcp.RenameBCP;
+import io.frebel.bcp.*;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtConstructor;
@@ -38,6 +32,7 @@ public enum ReloadManager {
     private ByteCodeProcessor redirectBCP = new MethodRedirectBCP();
     private ByteCodeProcessor addFieldAccessorBCP = new AddFieldAccessorBCP();
     private ByteCodeProcessor fieldRedirectBCP = new FieldRedirectBCP();
+    private ByteCodeProcessor castAndInstanceOfBCP = new CastAndInstanceOfBCP();
 
     public ClassInner reloadForAddForwardDelayed(ClassInner classInner) {
         try {
@@ -88,6 +83,7 @@ public enum ReloadManager {
         // modify
         byte[] bytes = classInner.getBytes();
         bytes = renameBCP.process(frebelClass.getClassLoader(), bytes);
+        bytes = castAndInstanceOfBCP.process(frebelClass.getClassLoader(), bytes);
         bytes = addFieldAccessorBCP.process(frebelClass.getClassLoader(), bytes);
         if (!addForwardDelayed) {
             bytes = addForward.process(frebelClass.getClassLoader(), bytes);

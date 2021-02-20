@@ -5,8 +5,6 @@ import io.frebel.FrebelClassRegistry;
 import io.frebel.bcp.AddFieldAccessorBCP;
 import io.frebel.bcp.AddUidBCP;
 import io.frebel.bcp.ByteCodeProcessor;
-import io.frebel.bcp.MethodRedirectBCP;
-import io.frebel.util.ClassUtils;
 
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
