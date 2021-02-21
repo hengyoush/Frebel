@@ -15,6 +15,7 @@ import java.util.Objects;
 
 import static io.frebel.FrebelClassRegistry.isSameFrebelClass;
 
+@SuppressWarnings("unused")
 public class FrebelRuntime {
     public static Object getCurrentVersion(Object obj) {
         try {
@@ -62,9 +63,6 @@ public class FrebelRuntime {
                 return obj;
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        } catch (NoClassDefFoundError e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
