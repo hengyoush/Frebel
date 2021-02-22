@@ -3,11 +3,15 @@ package io.frebel;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Map;
 import java.util.TreeMap;
 
 public class FrebelClass {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FrebelClass.class);
+
     private final String originName;
     private final TreeMap<String, ClassInner> versionClassMap;
     private boolean isReloaded;
@@ -24,28 +28,17 @@ public class FrebelClass {
         this.isReloaded = false;
         this.versionClassMap = new TreeMap<>();
         this.classLoader = classLoader;
-        try {
-            this.originClassInner = new ClassInner(originClassBytes);
-            this.originName = originClassInner.getOriginClassName();
-            this.versionClassMap.put(originClassInner.getOriginClassName(), originClassInner);
-            this.superClassName = originClassInner.getSuperClassName();
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public void updateVersionClass(ClassInner classInner) {
-        if (!versionClassMap.containsKey(classInner.getOriginClassName())) {
-            throw new IllegalArgumentException("updateVersionClass error!");
-        }
-
-        versionClassMap.put(classInner.getOriginClassName(), classInner);
+        this.originClassInner = new ClassInner(originClassBytes);
+        this.originName = originClassInner.getOriginClassName();
+        this.versionClassMap.put(originClassInner.getOriginClassName(), originClassInner);
+        this.superClassName = originClassInner.getSuperClassName();
     }
 
     /**
-     * 加载这个类
+     * add classInner to versionMap, so that the FrebelRuntime can forward method invocation
+     * to the newer class
      *
-     * @param classInner
+     * @param classInner internal class representation
      */
     public synchronized void addNewVersionClass(ClassInner classInner) {
         setReloaded(true);
@@ -93,8 +86,9 @@ public class FrebelClass {
     public String getMatchedClassNameByParentClassName(String interfaceName) {
         String findName = null;
         interfaceName = interfaceName.replace("/", ".");
+        CtClass ctClass;
         try {
-            CtClass ctClass = ClassPool.getDefault().get(interfaceName);
+            ctClass = ClassPool.getDefault().get(interfaceName);
             for (Map.Entry<String, ClassInner> entry : versionClassMap.entrySet()) {
                 ClassInner classInner = entry.getValue();
                 CtClass ctClass2 = ClassPool.getDefault().get(classInner.getOriginClassName());
@@ -106,11 +100,14 @@ public class FrebelClass {
             if (findName != null) {
                 return findName;
             } else {
-                throw new IllegalStateException("can't find class has implements the interface: " + interfaceName +
-                        ",class name:" + originName);
+                String errorMsg = "can't find class has implements the interface: " + interfaceName +
+                        ",class name:" + originName;
+                LOGGER.error(errorMsg);
+                throw new IllegalStateException(errorMsg);
             }
         } catch (NotFoundException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
+            // FIXME don't throw RuntimeException
             throw new RuntimeException(e);
         }
     }

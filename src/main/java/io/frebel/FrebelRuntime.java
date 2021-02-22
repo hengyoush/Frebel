@@ -1,11 +1,14 @@
 package io.frebel;
 
+import io.frebel.common.FrebelInvocationException;
 import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import sun.reflect.Reflection;
 
 import java.lang.reflect.Constructor;
@@ -17,24 +20,26 @@ import static io.frebel.FrebelClassRegistry.isSameFrebelClass;
 
 @SuppressWarnings("unused")
 public class FrebelRuntime {
+    private static final Logger LOGGER = LoggerFactory.getLogger(FrebelRuntime.class);
+
     public static Object getCurrentVersion(Object obj) {
         try {
-            Method method;
-            try {
-                method = obj.getClass().getMethod("_$fr$_getUid");
-            } catch (NoSuchMethodException e) {
+            String uid = FrebelObjectManager.getUid(obj);
+            if (uid == null) {
                 return obj;
             }
-            String uid = (String) method.invoke(obj);
+
             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(obj.getClass().getName());
             if (frebelClass == null) {
                 return obj;
             }
+
             String currentVersionClassName = frebelClass.getCurrentVersionClassName();
             Object currentVersion = FrebelObjectManager.getSpecificVersionObject(uid, currentVersionClassName);
             if (currentVersion == null) {
                 currentVersion = obj;
             }
+
             if (frebelClass.isReloaded()) {
                 if (!Objects.equals(currentVersion.getClass().getName(), currentVersionClassName)) {
                     synchronized (obj) {
@@ -44,12 +49,20 @@ public class FrebelRuntime {
                             currentVersion = obj;
                         }
                         if (!Objects.equals(currentVersion.getClass().getName(), currentVersionClassName)) {
+                            LOGGER.info("Current version class name: {}, newest version class name: {}",
+                                    currentVersion.getClass().getName(),
+                                    currentVersionClassName);
+                            LOGGER.info("Start create new version object, uid: {}", uid);
                             // 创建新对象 && 状态拷贝
                             Object newClassInstance = FrebelObjectManager.createUninitializedObject(Class.forName(currentVersionClassName));
+                            LOGGER.debug("Create uninitialized object finished, uid: {}", uid);
                             FrebelObjectManager.copyState(currentVersion, newClassInstance);
+                            LOGGER.debug("Copy state finished, uid: {}", uid);
                             // 注册新对象
                             FrebelObjectManager.register(uid, newClassInstance);
+                            LOGGER.debug("Register newer version object finished, uid: {}", uid);
                             FrebelObjectManager.clearState(currentVersion);
+                            LOGGER.debug("Clear old object state finished, uid: {}", uid);
                             return newClassInstance;
                         } else {
                             return currentVersion;
@@ -63,23 +76,21 @@ public class FrebelRuntime {
                 return obj;
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }
 
     public static Object getSpecificVersion(Object obj, String className) {
-        Method method;
         try {
-            method = obj.getClass().getMethod("_$fr$_getUid");
-            String uid = (String) method.invoke(obj);
+            String uid = FrebelObjectManager.getUid(obj);
             Object result = FrebelObjectManager.getSpecificVersionObject(uid, className);
             if (result == null) {
                 return FrebelObjectManager.createObjectOf(obj, className);
             }
             return result;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             return obj;
         }
     }
@@ -106,19 +117,19 @@ public class FrebelRuntime {
                 return Class.forName(className).newInstance();
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            LOGGER.error(e.getMessage(), e);
+            throw new FrebelInvocationException(e);
         }
     }
 
-    public static Object invokeConsWithParams(String className, String descriptor, Object[] args, Class[] argsType, String returnTypeName) {
+    public static Object invokeConsWithParams(String className, String descriptor, Object[] args, Class<?>[] argsType, String returnTypeName) {
         className = className.replace("/", ".");
         FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);
         try {
             if (frebelClass != null) {
                 Class<?> currentVersionClass = Class.forName(frebelClass.getCurrentVersionClassName());
                 Constructor<?>[] constructors = currentVersionClass.getConstructors();
-                Constructor matched = null;
+                Constructor<?> matched = null;
                 for (Constructor<?> constructor : constructors) {
                     Class<?>[] parameterTypes = constructor.getParameterTypes();
                     if (isMatchedMethod(parameterTypes, argsType)) {
@@ -138,6 +149,8 @@ public class FrebelRuntime {
                             if (newArg.getClass() != parameterTypes[i]) {
                                 // retry because between 1 and 2 args class has benn reloaded,
                                 // so the class version has been outdated
+                                LOGGER.warn("Retry to find matched constructor, constructor: {}, args index: {}, method defined type: {}" +
+                                        ", current version type: {}", matched, i, parameterTypes[i].getName(), newArg.getClass().getName());
                                 retryFlag = true;
                                 break;
                             } else {
@@ -163,19 +176,22 @@ public class FrebelRuntime {
                             }
                         } catch (IllegalArgumentException e) {
                             // args type problem, retry
+                            LOGGER.warn("Retry to find correct constructor because try to invoke constructor: {} failed", matched);
                             return invokeConsWithParams(className, descriptor, args, argsType, returnTypeName);
                         }
                     }
                 } else {
-                    throw new IllegalStateException("no constructor found in Class:" + currentVersionClass +
-                            ", constructor types are: " + Arrays.toString(argsType));
+                    String errorMsg = "no constructor found in Class:" + currentVersionClass +
+                            ", constructor types are: " + Arrays.toString(argsType);
+                    LOGGER.error(errorMsg);
+                    throw new IllegalStateException(errorMsg);
                 }
             } else {
                 return Class.forName(className).getConstructor(argsType).newInstance(args);
             }
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            LOGGER.error(e.getMessage(), e);
+            throw new FrebelInvocationException(e);
         }
     }
 
@@ -185,12 +201,12 @@ public class FrebelRuntime {
 
     public static Object invokeWithNoParams(String methodName, Object invokeObj, Class callerClass, String returnTypeName) {
         try {
+            Method method;
+            Object returnValue;
+            Object currentVersion = getCurrentVersion(invokeObj);
+            method = currentVersion.getClass().getMethod(methodName);
             try {
-                Object returnValue;
-                Object currentVersion = getCurrentVersion(invokeObj);
-                Method method = currentVersion.getClass().getMethod(methodName);
                 returnValue = method.invoke(currentVersion);
-
                 if (returnValue != null) {
                     FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
                     if (returnTypeName.equals("void")) {
@@ -204,24 +220,28 @@ public class FrebelRuntime {
                         if (Class.forName(returnTypeName.replace("/", ".")).isInstance(returnValue)) {
                             return returnValue;
                         } else {
-                            throw new IllegalStateException("error return value: " + returnTypeName + "," +
-                                    "real return value type is: " + returnValue.getClass());
+                            String errorMsg = "error return value: " + returnTypeName + "," +
+                                    "real return value type is: " + returnValue.getClass();
+                            LOGGER.error(errorMsg);
+                            throw new FrebelInvocationException(errorMsg);
                         }
                     }
                 } else {
-                    return returnValue;
+                    return null;
                 }
             } catch (IllegalArgumentException e) {
                 // args type problem, retry
+                LOGGER.warn("Retry to find correct method because try to invoke method: {} failed", method);
                 return invokeWithNoParams(methodName, invokeObj, callerClass, returnTypeName);
             }
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            LOGGER.error(e.getMessage(), e);
+            throw new FrebelInvocationException(e);
         }
     }
 
 
-    private static boolean isMatchedMethod(Class[] parameterTypes, Class[] argsType) {
+    private static boolean isMatchedMethod(Class<?>[] parameterTypes, Class<?>[] argsType) {
         if (parameterTypes.length != argsType.length) {
             return false;
         }
@@ -229,13 +249,9 @@ public class FrebelRuntime {
         for (int i = 0; i < parameterTypes.length; i++) {
             Class<?> parameterType = parameterTypes[i];
             Class<?> aClass = argsType[i];
-            if (parameterType.getName().equals(aClass.getName())) {
-                continue;
-            } else if (isSameFrebelClass(aClass.getName(), parameterType.getName())) {
-                continue;
-            } else if (parameterType.isAssignableFrom(aClass)) {
-                continue;
-            } else {
+            if (!parameterType.isAssignableFrom(aClass) && !isSameFrebelClass(aClass.getName(), parameterType.getName())) {
+                // when this method's some one param is not subType of parameterType or not in the same FrebelClass,
+                // we think this method doesn't match
                 find = false;
                 break;
             }
@@ -275,12 +291,18 @@ public class FrebelRuntime {
                     } else {
                         // retry because between 1 and 2 args class has benn reloaded,
                         // so the class version has been outdated
+                        LOGGER.warn("Retry to find matched method, method: {}, args index: {}, method defined type: {}" +
+                                        ", current version type: {}.",
+                                findMethod,
+                                i,
+                                parameterTypes[i].getName(),
+                                newArgs[i].getClass().getName());
                         retryFlag = true;
                         break;
                     }
                 }
                 if (retryFlag) {
-                    System.out.printf("retry methodName: %s, invokeObjClass: %s, argsType: %s\n", methodName,
+                    LOGGER.warn("retry methodName: {}, invokeObjClass: {}, argsType: {}.", methodName,
                             invokeObj.getClass().getName(), Arrays.toString(argsType));
                     return invokeWithParams(methodName, invokeObj, args, argsType, callerClass, returnTypeCastTo);
                 } else {
@@ -290,7 +312,7 @@ public class FrebelRuntime {
                         if (returnValue != null) {
                             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
                             if (returnTypeCastTo.equals("void")) {
-                                throw new IllegalStateException("expect null return value, but not null!");
+                                throw new FrebelInvocationException("expect null return value, but not null!");
                             } else if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
                                 return getSpecificVersion(returnValue, callerClass.getName());
                             } else if (frebelClass != null) {
@@ -300,25 +322,30 @@ public class FrebelRuntime {
                                 if (Class.forName(returnTypeCastTo.replace("/", ".")).isInstance(returnValue)) {
                                     return returnValue;
                                 } else {
-                                    throw new IllegalStateException("error return value: " + returnTypeCastTo + "," +
-                                            "real return value type is: " + returnValue.getClass());
+                                    String errorMsg = "error return value: " + returnTypeCastTo + "," +
+                                            "real return value type is: " + returnValue.getClass() + ".";
+                                    LOGGER.error(errorMsg);
+                                    throw new FrebelInvocationException(errorMsg);
                                 }
                             }
                         } else {
-                            return returnValue;
+                            return null;
                         }
                     } catch (IllegalArgumentException e) {
                         // args type problem, retry
+                        LOGGER.warn("Retry to find correct method because try to invoke method: {} failed", findMethod);
                         return invokeWithParams(methodName, invokeObj, args, argsType, callerClass, returnTypeCastTo);
                     }
                 }
             } else {
                 // no matched method found
-                throw new IllegalStateException("no method found!");
+                String errorMsg = "No method found in Class:" + currentVersion.getClass().getName() +
+                        ", method arguments types are: " + Arrays.toString(argsType);
+                throw new FrebelInvocationException("no method found!");
             }
-
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            LOGGER.error(e.getMessage(), e);
+            throw new FrebelInvocationException(e);
         }
     }
 
@@ -329,7 +356,9 @@ public class FrebelRuntime {
                 String matched = frebelClass.getMatchedClassNameByParentClassName(className);
                 toCast = getSpecificVersion(toCast, matched);
             } catch (IllegalStateException e) {
-                e.printStackTrace();
+                LOGGER.warn("FrebelClass: {} doesn't has subclass of type: {}",
+                        frebelClass.getOriginName(),
+                        className);
                 throw new ClassCastException("Cannot cast " + frebelClass.getOriginName() + " to " + className);
             }
         }
@@ -337,10 +366,8 @@ public class FrebelRuntime {
             Class<?> cls = Class.forName(className);
             return cls.cast(toCast);
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
-        } catch (ClassCastException e) {
-            throw e;
         }
     }
 
@@ -354,7 +381,9 @@ public class FrebelRuntime {
                 String matched = frebelClass.getMatchedClassNameByParentClassName(className);
                 toCast = getSpecificVersion(toCast, matched);
             } catch (IllegalStateException e) {
-                e.printStackTrace();
+                LOGGER.warn("FrebelClass: {} doesn't has subclass of type: {}",
+                        frebelClass.getOriginName(),
+                        className);
                 return 0;
             }
         }
@@ -363,7 +392,7 @@ public class FrebelRuntime {
             cls.cast(toCast);
             return 1;
         } catch (ClassNotFoundException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             return 0;
         } catch (ClassCastException e) {
             return 0;
@@ -460,10 +489,11 @@ public class FrebelRuntime {
                     return method.getSignature();
                 }
             }
+            LOGGER.error("Failed to find {} params invoke method.", paramsNum);
             throw new IllegalArgumentException();
         } catch (NotFoundException e) {
-            e.printStackTrace();
-            throw new RuntimeException(e);
+            LOGGER.error(e.getMessage(), e);
+            throw new IllegalArgumentException(e);
         }
     }
 
@@ -482,24 +512,24 @@ public class FrebelRuntime {
             }
             throw new IllegalArgumentException();
         } catch (NotFoundException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }
 
-    private static Class[] getClassArrayFromDesc(String desc) {
+    private static Class<?>[] getClassArrayFromDesc(String desc) {
         try {
             CtClass[] ctClasses = Descriptor.getParameterTypes(desc, ClassPool.getDefault());
-            if (ctClasses == null && ctClasses.length == 0) {
+            if (ctClasses == null || ctClasses.length == 0) {
                 throw new IllegalStateException();
             }
-            Class[] classes = new Class[ctClasses.length];
+            Class<?>[] classes = new Class[ctClasses.length];
             for (int i = 0; i < ctClasses.length; i++) {
                 classes[i] = Class.forName(ctClasses[i].getName());
             }
             return classes;
         } catch (NotFoundException | ClassNotFoundException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }

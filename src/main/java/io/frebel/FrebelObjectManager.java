@@ -2,6 +2,8 @@ package io.frebel;
 
 import io.frebel.util.FrebelUnsafe;
 import io.frebel.util.PrimitiveTypeUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
@@ -21,28 +23,25 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 public class FrebelObjectManager {
-    private static Map<String/* className */, Map<String, WeakReference<Object>>> objectMap = new ConcurrentHashMap<>();
-    private static ScheduledExecutorService cleanThreadPool = Executors.newScheduledThreadPool(1);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FrebelObjectManager.class);
+
+    private static final Map<String/* className */, Map<String, WeakReference<Object>>> objectMap =
+            new ConcurrentHashMap<>();
+    private static final ScheduledExecutorService cleanThreadPool =
+            Executors.newScheduledThreadPool(1);
+
     static {
-        cleanThreadPool.scheduleWithFixedDelay(new Runnable() {
-            @Override
-            public void run() {
-                Iterator<Map<String, WeakReference<Object>>> iterator = objectMap.values().iterator();
-                while (iterator.hasNext()) {
-                    Map<String, WeakReference<Object>> map = iterator.next();
-                    Iterator<Map.Entry<String, WeakReference<Object>>> it = map.entrySet().iterator();
-                    while (it.hasNext()) {
-                        Map.Entry<String, WeakReference<Object>> entry = it.next();
-                        if (entry.getValue() == null) {
-                            it.remove();
-                        }
-                    }
-                    if (map.isEmpty()) {
-                        iterator.remove();
-                    }
+        cleanThreadPool.scheduleWithFixedDelay(() -> {
+            Iterator<Map<String, WeakReference<Object>>> iterator = objectMap.values().iterator();
+            while (iterator.hasNext()) {
+                Map<String, WeakReference<Object>> map = iterator.next();
+                map.entrySet().removeIf(entry -> entry.getValue() == null);
+                if (map.isEmpty()) {
+                    iterator.remove();
                 }
             }
         }, 1000L, 1000L, TimeUnit.MILLISECONDS);
+        LOGGER.info("FrebelObjectManager clean thread has started.");
     }
 
     public static void register(String uuid, Object o) {
@@ -52,6 +51,7 @@ public class FrebelObjectManager {
             map = objectMap.get(uuid);
         }
         map.put(o.getClass().getName(), new WeakReference<>(o));
+        LOGGER.debug("uuid: {}, class name: {} registered in FrebelObjectManager", uuid, o.getClass().getName());
     }
 
     public static Object getSpecificVersionObject(String uuid, String className) {
@@ -78,7 +78,7 @@ public class FrebelObjectManager {
             treeMap.put(className, new WeakReference<>(newInstance));
             return newInstance;
         } catch (Exception e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }
@@ -87,21 +87,20 @@ public class FrebelObjectManager {
         Method method;
         try {
             method = src.getClass().getMethod("_$fr$_getUid");
-            String uid = (String) method.invoke(src);
-            return uid;
+            return (String) method.invoke(src);
         } catch (NoSuchMethodException e) {
             return null;
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }
 
-    public static Object createUninitializedObject(Class c) {
+    public static Object createUninitializedObject(Class<?> c) {
         try {
             return FrebelUnsafe.getUnsafe().allocateInstance(c);
         } catch (InstantiationException e) {
-            e.printStackTrace();
+            LOGGER.error(e.getMessage(), e);
             throw new RuntimeException(e);
         }
     }
@@ -130,6 +129,7 @@ public class FrebelObjectManager {
             String previousClassName = FrebelClass.getPreviousClassName(newClassName);
             return getSpecificVersionObject(uid, previousClassName);
         } else {
+            LOGGER.error("class name must have _$fr$");
             throw new RuntimeException("class name must have _$fr$");
         }
     }

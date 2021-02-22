@@ -1,30 +1,30 @@
 package io.frebel;
 
 import io.frebel.bytecode.AttributeInfo;
-import io.frebel.bytecode.ClassAccessFlagsUtil;
 import io.frebel.bytecode.ClassFile;
 import io.frebel.bytecode.ClassFileAnalysis;
 import io.frebel.bytecode.ConstantClassInfo;
-import io.frebel.bytecode.ConstantFieldInfo;
-import io.frebel.bytecode.ConstantMethodInfo;
 import io.frebel.bytecode.ConstantNameAndTypeInfo;
 import io.frebel.bytecode.ConstantUtf8Info;
 import io.frebel.bytecode.CpInfo;
 import io.frebel.bytecode.FieldInfo;
 import io.frebel.bytecode.U2;
+import io.frebel.common.FrebelClassFileAnalysisException;
 import io.frebel.reload.MethodInfo;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayOutputStream;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 public class ClassInner {
+    private static final Logger LOGGER = LoggerFactory.getLogger(ClassInner.class);
+
     private ClassFile classFile;
     private String originClassName;
     private String superClassName;
-    private List<MethodInfo> constantPoolMethods;
     private Integer constantPoolCount;
     private byte[] bytes;
     private volatile boolean modified;
@@ -34,7 +34,8 @@ public class ClassInner {
             this.classFile = ClassFileAnalysis.analysis(bytes);
             this.bytes = bytes;
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            LOGGER.error("Error encounters when analysis class file bytes.", e);
+            throw new FrebelClassFileAnalysisException(e);
         }
     }
 
@@ -77,14 +78,6 @@ public class ClassInner {
         return result;
     }
 
-    public List<MethodInfo> getDeclaredMethods() {
-        return getDeclaredMethods(true);
-    }
-
-    public List<MethodInfo> getDeclaredMethods(boolean containConstructor) {
-        return getDeclaredMethods(containConstructor, false);
-    }
-
     public List<MethodInfo> getDeclaredMethods(boolean containConstructor, boolean notPrivate) {
         io.frebel.bytecode.MethodInfo[] selfMethodArr = classFile.getMethods();
         if (selfMethodArr == null) {
@@ -107,86 +100,6 @@ public class ClassInner {
         }
 
         return result;
-    }
-
-//    public List<MethodInfo> getConstantPoolMethods() {
-//        if (constantPoolMethods != null) {
-//            return constantPoolMethods;
-//        }
-//        CpInfo[] cpInfos = classFile.getConstantPool();
-//        List<MethodInfo> result = new ArrayList<>();
-//        for (CpInfo cpInfo : cpInfos) {
-//            if (cpInfo instanceof ConstantMethodInfo) {
-//                ConstantMethodInfo cpMethodInfo = (ConstantMethodInfo) cpInfo;
-//                int classIndex = cpMethodInfo.getClassIndex();
-//                int nameAndTypeIndex = cpMethodInfo.getNameAndTypeIndex();
-//
-//                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[classIndex - 1];
-//                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[nameAndTypeIndex - 1];
-//                int classNameIndex = constantClassInfo.getNameIndex();
-//                int methodNameIndex = nameAndTypeInfo.getNameIndex();
-//                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
-//                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString();
-//                String methodName = ((ConstantUtf8Info) cpInfos[methodNameIndex - 1]).asString();
-//                String descriptor = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
-//                result.add(new MethodInfo(className, methodName, descriptor, cpMethodInfo));
-//            }
-//        }
-//
-//        return constantPoolMethods = result;
-//    }
-//
-//    public synchronized void updateConstantFieldClassName(String originClassName, String newClassName) {
-//        CpInfo[] cpInfos = classFile.getConstantPool();
-//        for (CpInfo cpInfo : cpInfos) {
-//            if (cpInfo instanceof ConstantFieldInfo) {
-//                ConstantFieldInfo constantFieldInfo = (ConstantFieldInfo) cpInfo;
-//                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[constantFieldInfo.getClassIndex() - 1];
-//                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[constantFieldInfo.getNameAndTypeIndex() - 1];
-//                String t = "L" + originClassName.replace(".", "/") + ";";
-//                String newType = "L" + newClassName.replace(".", "/") + ";";
-//                int classNameIndex = constantClassInfo.getNameIndex();
-//                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
-//                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString().replace("/", ".");
-//                String type = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
-//                if (className.equals(getOriginClassName()) && type.equals(t)) {
-//                    ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).update(newType);
-//                    modified = true;
-//                }
-//            }
-//        }
-//    }
-//
-//    public synchronized boolean updateConstantMethodClassName(String originClassName, String newClassName) {
-//        CpInfo[] cpInfos = classFile.getConstantPool();
-//        for (CpInfo cpInfo : cpInfos) {
-//            if (cpInfo instanceof ConstantMethodInfo) {
-//                ConstantMethodInfo constantMethodInfo = (ConstantMethodInfo) cpInfo;
-//                ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[constantMethodInfo.getClassIndex() - 1];
-//                ConstantNameAndTypeInfo nameAndTypeInfo = (ConstantNameAndTypeInfo) cpInfos[constantMethodInfo.getNameAndTypeIndex() - 1];
-//                int classNameIndex = constantClassInfo.getNameIndex();
-//                int methodNameIndex = nameAndTypeInfo.getNameIndex();
-//                int descriptorIndex = nameAndTypeInfo.getDescriptorIndex();
-//                String className = ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).asString().replace("/", ".");
-//                String name = ((ConstantUtf8Info) cpInfos[methodNameIndex - 1]).asString();
-//                String type = ((ConstantUtf8Info) cpInfos[descriptorIndex - 1]).asString();
-//                if (Objects.equals(className, methodInfo.getClassName())) {
-//                    ((ConstantUtf8Info) cpInfos[classNameIndex - 1]).update(newClassName.replace(".", "/"));
-//                    modified = true;
-//                    return true;
-//                }
-//            }
-//        }
-//
-//        return false;
-//    }
-
-    public void updateSuperClassName(String newSuperClassName) {
-
-    }
-
-    public void updateInterfaceName(String oldInterfaceName, String newInterfaceName) {
-
     }
 
     public void updateNameTypeAndClassInfo(String oldClassName, String newClassName) {
@@ -240,14 +153,6 @@ public class ClassInner {
         if (modified) {
             getBytes();
         }
-    }
-
-    public int getConstantPoolCount() {
-        if (this.constantPoolCount != null) {
-            return this.constantPoolCount;
-        }
-        U2 constantPoolCount = classFile.getConstantPoolCount();
-        return (this.constantPoolCount = constantPoolCount.toInt());
     }
 
     public ClassFile getClassFile() {
@@ -310,8 +215,8 @@ public class ClassInner {
                     this.modified = false;
                 }
             } catch (Exception e) {
-                e.printStackTrace();
-                throw new RuntimeException(e);
+                LOGGER.error(e.getMessage(), e);
+                throw new FrebelClassFileAnalysisException(e);
             }
         }
         return bytes;
@@ -320,7 +225,6 @@ public class ClassInner {
     private void resetCache() {
         this.classFile = null;
         this.originClassName = null;
-        this.constantPoolMethods = null;
         this.constantPoolCount = null;
         this.superClassName = null;
     }

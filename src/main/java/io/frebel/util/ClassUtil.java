@@ -11,8 +11,8 @@ public class ClassUtil {
                 // bootstrap classloader
                 return true;
             }
-        } catch (Exception e) {
-            return false;
+        } catch (Throwable ignored) {
+
         }
 
         return className.startsWith("java") || className.startsWith("sun") || className.startsWith("jdk");

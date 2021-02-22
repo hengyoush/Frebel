@@ -72,11 +72,11 @@ public class FileChangeDetector {
                     return FileVisitResult.CONTINUE;
                 }
             });
-            LOGGER.debug("FileChangeDetector walk file tree finished.");
             if (LOGGER.isDebugEnabled()) {
+                LOGGER.debug("FileChangeDetector walk file tree finished.");
                 LOGGER.debug("FileChangeDetector classFileMap is: {}.", classFileMap);
+                LOGGER.debug("FileChangeDetector starts thread to watch the directory.");
             }
-            LOGGER.debug("FileChangeDetector starts thread to watch the directory.");
             path.register(watchService, ENTRY_CREATE, ENTRY_MODIFY);
             Thread thread = new Thread(() -> {
                 while (true) {
