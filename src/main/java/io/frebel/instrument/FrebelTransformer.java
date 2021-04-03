@@ -27,8 +27,7 @@ public class FrebelTransformer implements ClassFileTransformer {
                             byte[] classfileBuffer) {
         String dotClassName = className.replace("/", ".");
         try {
-            if (loader == null || ClassUtil.isFrebelGeneratedClass(className)
-                    || className.startsWith("io/frebel") || ClassUtil.isJdkInternalClass(className)) {
+            if (loader == null || ClassUtil.needSkipTransform(className)) {
                 if (LOGGER.isDebugEnabled()) {
                     LOGGER.debug("Frebel skip transform class first time, class name: {}.", dotClassName);
                 }

@@ -12,12 +12,8 @@ public class A {
     private I b;
     private int a;
     public int asay() {
-        Object b = (Object) new B(this);
-        this.b = (I)b;
-        if (b instanceof I) {
-            System.out.println("1");
-        }
-        return (int) b;
+        new Thread(b::hashCode);
+        return 1;
     }
 
     public static void main(String[] args) throws Exception {

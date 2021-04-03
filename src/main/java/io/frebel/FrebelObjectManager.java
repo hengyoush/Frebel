@@ -45,6 +45,9 @@ public class FrebelObjectManager {
     }
 
     public static void register(String uuid, Object o) {
+        if (uuid == null) {
+            return;
+        }
         Map<String, WeakReference<Object>> map = objectMap.get(uuid);
         if (map == null) {
             objectMap.put(uuid, new ConcurrentHashMap<>());

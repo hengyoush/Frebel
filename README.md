@@ -4,7 +4,7 @@
 ![Frebel](https://img.shields.io/github/forks/hengyoush/Frebel)
 ![Frebel](https://img.shields.io/github/stars/hengyoush/Frebel)
 ![Frebel](https://img.shields.io/github/license/hengyoush/Frebel)
-
+          
 Frebel是一个可以让你修改的JAVA代码实时生效的插件，它有如下特点：
 
 - 轻量化：你只需要在启动命令中加入一行配置即可使用。
