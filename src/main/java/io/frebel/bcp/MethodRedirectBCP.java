@@ -25,19 +25,10 @@ import jdk.internal.org.objectweb.asm.tree.VarInsnNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Objects;
 
 import static io.frebel.util.PrimitiveTypeUtil.getUnBoxedMethodSignature;
-import static jdk.internal.org.objectweb.asm.Opcodes.ARETURN;
-import static jdk.internal.org.objectweb.asm.Opcodes.ASM4;
-import static jdk.internal.org.objectweb.asm.Opcodes.ASTORE;
-import static jdk.internal.org.objectweb.asm.Opcodes.CHECKCAST;
-import static jdk.internal.org.objectweb.asm.Opcodes.DUP;
-import static jdk.internal.org.objectweb.asm.Opcodes.INVOKEINTERFACE;
-import static jdk.internal.org.objectweb.asm.Opcodes.INVOKESPECIAL;
-import static jdk.internal.org.objectweb.asm.Opcodes.INVOKESTATIC;
-import static jdk.internal.org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
-import static jdk.internal.org.objectweb.asm.Opcodes.NEW;
-import static jdk.internal.org.objectweb.asm.Opcodes.PUTFIELD;
+import static jdk.internal.org.objectweb.asm.Opcodes.*;
 
 public class MethodRedirectBCP implements ByteCodeProcessor {
     @Override
@@ -60,6 +51,7 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
             while (iterator.hasNext()) {
                 AbstractInsnNode insnNode = iterator.next();
                 int opcode = insnNode.getOpcode();
+                boolean flag = false;
                 if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) {
                     try {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) insnNode;
@@ -82,12 +74,15 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                             String castMethodName = returnType.getName() + "Value";
                             il.add(new TypeInsnNode(CHECKCAST, returnTypeName));
                             il.add(new MethodInsnNode(INVOKEVIRTUAL, returnTypeName, castMethodName, getUnBoxedMethodSignature(returnTypeName, castMethodName), false));
+                        } else if (returnType != null && "void".equals(returnType.getName())) {
+                            il.add(new InsnNode(POP));
                         } else if (returnType != null && !returnType.isPrimitive()) {
                             // we are safe to use the returnValueCastTo to cast, because returnValueCastTo is not void and null
                             il.add(new TypeInsnNode(CHECKCAST, returnValueCastTo.replace(".", "/")));
                         }
                         insnList.insert(insnNode.getPrevious(), il);
                         insnList.remove(insnNode);
+                        flag = true;
                     } catch (Exception e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
@@ -102,6 +97,11 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                     }
 
                     if (!methodInsnNode.name.equals("<init>")) {
+                        continue;
+                    } else if ("<init>".equals(method.name) && (Objects.equals(cn.name, methodInsnNode.owner)
+                        || Objects.equals(cn.superName, methodInsnNode.owner))) {
+                        // skip when invoke cons or super cons within its own cons
+                        // FIXME move to skip method
                         continue;
                     }
 
@@ -118,7 +118,7 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         boolean dupRemoved = false;
                         boolean newRemoved = false;
                         AbstractInsnNode cur = insnNode.getPrevious();
-                        while (!dupRemoved || !newRemoved) {
+                        while ((!dupRemoved || !newRemoved) && cur != null) {
                             if (!dupRemoved && cur.getOpcode() != DUP) {
                                 cur = cur.getPrevious();
                                 continue;
@@ -142,14 +142,15 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         insnList.insert(insnNode.getPrevious(), il);
                         // remove origin invoke instruction
                         insnList.remove(insnNode);
+                        flag = true;
                     } catch (Exception e) {
                         e.printStackTrace();
                         throw new RuntimeException(e);
                     }
                 }
+                // we have pushed three value on the operand stack
+                if (flag) method.maxStack += 3;
             }
-            // we have pushed three value on the operand stack
-            method.maxStack += 3;
         }
         ClassWriter classWriter = new ClassWriter(0);
         cn.accept(classWriter);
@@ -222,7 +223,8 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         } else {
                             for (LocalVariableNode localVariableNode : localVariableNodesWithSpecVar) {
                                 if (getLineNumberFromLableNode(localVariableNode.start) <= getLineNumberFromLableNode(start)
-                                        && getLineNumberFromLableNode(localVariableNode.end) >= getLineNumberFromLableNode(end)) {
+                                        && (localVariableNode.end.getNext() == null ||  // we have reached method's end
+                                        getLineNumberFromLableNode(localVariableNode.end) >= getLineNumberFromLableNode(end))) {
                                     returnValueCastTo = Descriptor.getFieldDescReferenceClassName(localVariableNode.desc);
                                     break;
                                 }

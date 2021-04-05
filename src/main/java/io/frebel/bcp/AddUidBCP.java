@@ -18,7 +18,12 @@ public class AddUidBCP implements ByteCodeProcessor {
         ClassPool classPool = ClassPool.getDefault();
         try {
             CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(bytes), false);
-            System.out.println(ctClass.getName());
+            try {
+                if (ctClass.getDeclaredField("_$fr$_uid") != null) {
+                    return ctClass.toBytecode();
+                }
+            } catch (Exception ignore) {}
+//            System.out.println(ctClass.getName());
             if (ctClass.isInterface() || ctClass.isAnnotation()) {
                 return bytes;
             }

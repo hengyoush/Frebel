@@ -6,7 +6,7 @@ public class ClassUtil {
 
     public static boolean needSkipTransform(String className) {
         if (className.startsWith("com/sun") || className.startsWith("junit") || className.startsWith("javassist")
-            || className.startsWith("com/intellij")) {
+            || className.startsWith("com/intellij") || className.contains("junit")) {
             return true;
         }
         if (isFrebelGeneratedClass(className) || className.startsWith("io/frebel")) {

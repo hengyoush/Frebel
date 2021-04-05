@@ -427,6 +427,26 @@ public class FrebelRuntime {
         return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
     }
 
+    public static Object invokeWith6Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5,Object arg6, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5,arg6}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
+
+    public static Object invokeWith7Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5,Object arg6,Object arg7, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5,arg6,arg7}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
+
+    public static Object invokeWith8Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5,Object arg6,Object arg7, Object arg8, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5,arg6,arg7,arg8}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
+
+    public static Object invokeWith9Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5,Object arg6,Object arg7, Object arg8,Object arg9, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5,arg6,arg7,arg8,arg9}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
+
+    public static Object invokeWith10Params(Object target, Object arg1, Object arg2, Object arg3, Object arg4, Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10, String methodName, String descriptor, String returnTypeCastTo) {
+        return invokeWithParams(methodName, target, new Object[]{arg1, arg2, arg3, arg4, arg5,arg6,arg7,arg8,arg9,arg10}, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
+
     /*********** constructor redirect methods *************/
     public static Object invokeConsWith0Params(String className, String descriptor, String returnTypeCastTo) {
         return invokeConsWithNoParams(className, descriptor, returnTypeCastTo);
@@ -434,6 +454,42 @@ public class FrebelRuntime {
 
     public static Object invokeConsWith1Params(Object arg1, String className, String descriptor, String returnTypeCastTo) {
         return invokeConsWithParams(className, descriptor, new Object[]{arg1}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith2Params(Object arg1,Object arg2, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith3Params(Object arg1,Object arg2,Object arg3 ,String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith4Params(Object arg1,Object arg2,Object arg3,Object arg4,String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith5Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith6Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith7Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith8Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith9Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith10Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
     }
 
     public static Object invokeGetField(Object target, String owner, String fieldName, String className) {
