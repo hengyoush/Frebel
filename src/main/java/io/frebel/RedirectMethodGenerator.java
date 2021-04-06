@@ -73,14 +73,6 @@ public class RedirectMethodGenerator {
         }
     }
 
-//    public static void main(String[] args) throws Exception {
-//        CtClass ctClass = ClassPool.getDefault().makeClass("s123");
-//        ctClass.addMethod(CtMethod.make("public void test() {java.lang.System.out.println(\"123\");}", ctClass));
-//        Class aClass = ctClass.toClass();
-//        Object o = aClass.newInstance();
-//        aClass.getMethod("test", new Class[]{}).invoke(o);
-//    }
-
     public static String generateClassName() {
         // FIXME use more safe way
         return "Redirect" + System.currentTimeMillis();
