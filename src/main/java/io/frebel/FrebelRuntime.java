@@ -1,12 +1,10 @@
 package io.frebel;
 
 import io.frebel.common.FrebelInvocationException;
+import io.frebel.common.PrimitiveWrapper;
 import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.NotFoundException;
+import javassist.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import sun.reflect.Reflection;
@@ -400,6 +398,16 @@ public class FrebelRuntime {
         }
     }
 
+    /*********** instance redirect methods *************/
+    public static Object invokeInstanceMethodsWithWrapperParams(Object target, Object[] wrapperParams, String methodName, String descriptor, String returnTypeCastTo) {
+        Object[] newParams = new Object[wrapperParams.length];
+        for (int i = 0; i < wrapperParams.length; i++) {
+            if (wrapperParams[i] instanceof PrimitiveWrapper) {
+                wrapperParams[i] = ((PrimitiveWrapper) wrapperParams[i]).unwrap();
+            }
+        }
+        return invokeWithParams(methodName, target, wrapperParams, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
     public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, String returnTypeName) {
         return invokeWithParams(methodName, invokeObj, args, argsType, Reflection.getCallerClass(2), returnTypeName);
     }
@@ -449,6 +457,20 @@ public class FrebelRuntime {
     }
 
     /*********** constructor redirect methods *************/
+    public static Object invokeConsWithWrapperParams(Object[] wrapperParams, String className, String descriptor, String returnTypeCastTo) {
+        Object[] newParams = new Object[wrapperParams.length];
+        for (int i = 0; i < wrapperParams.length; i++) {
+            if (wrapperParams[i] instanceof PrimitiveWrapper) {
+                wrapperParams[i] = ((PrimitiveWrapper) wrapperParams[i]).unwrap();
+            }
+        }
+        return invokeConsWithParams(className, descriptor, wrapperParams, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static void main(String[] args) throws NotFoundException, CannotCompileException {
+        ClassPool aDefault = ClassPool.getDefault();
+    }
+
     public static Object invokeConsWith0Params(String className, String descriptor, String returnTypeCastTo) {
         return invokeConsWithNoParams(className, descriptor, returnTypeCastTo);
     }
@@ -580,6 +602,11 @@ public class FrebelRuntime {
         return "invokeConsWith" + paramsNum + "Params";
     }
 
+    public static Method getConsMethodInstance(int paramsNum) {
+        return Arrays.stream(FrebelRuntime.class.getMethods())
+                .filter(i -> i.getName().equals(getConsMethodName(paramsNum))).findFirst().get();
+    }
+
     public static String getConsDesc(int paramsNum) {
         String frebelMethodName = getConsMethodName(paramsNum);
         try {
@@ -604,7 +631,11 @@ public class FrebelRuntime {
             }
             Class<?>[] classes = new Class[ctClasses.length];
             for (int i = 0; i < ctClasses.length; i++) {
-                classes[i] = Class.forName(ctClasses[i].getName());
+                if (ctClasses[i].isPrimitive()) {
+                    classes[i] = PrimitiveTypeUtil.getPrimitiveClass(ctClasses[i].getName());
+                } else {
+                    classes[i] = Class.forName(ctClasses[i].getName());
+                }
             }
             return classes;
         } catch (NotFoundException | ClassNotFoundException e) {

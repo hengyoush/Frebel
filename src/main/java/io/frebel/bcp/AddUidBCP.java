@@ -7,6 +7,9 @@ import javassist.CtField;
 import javassist.CtMethod;
 
 import java.io.ByteArrayInputStream;
+import java.lang.reflect.Constructor;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 每个类都要在agent开始时加入uid方法

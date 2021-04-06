@@ -47,6 +47,38 @@ public class PrimitiveTypeUtil {
         }
     }
 
+    public static Class getPrimitiveClass(String primitiveClassName) {
+        switch (primitiveClassName) {
+            case "boolean": {
+                return Boolean.TYPE;
+            }
+            case "byte": {
+                return Byte.TYPE;
+            }
+            case "short": {
+                return Short.TYPE;
+            }
+            case "int": {
+                return Integer.TYPE;
+            }
+            case "long": {
+                return Long.TYPE;
+            }
+            case "float": {
+                return Float.TYPE;
+            }
+            case "double": {
+                return Double.TYPE;
+            }
+            case "char": {
+                return Character.TYPE;
+            }
+            default: {
+                throw new IllegalArgumentException();
+            }
+        }
+    }
+
     public static String getUnBoxedMethodSignature(String primitiveClassName, String methodName) {
         try {
             CtMethod method = ClassPool.getDefault().get(primitiveClassName.replace("/", ".")).getDeclaredMethod(methodName);

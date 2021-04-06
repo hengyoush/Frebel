@@ -5,8 +5,9 @@ public class ClassUtil {
     public static final String FREBEL_GEN_CLASS_SUFFIX = "_$fr$";
 
     public static boolean needSkipTransform(String className) {
-        if (className.startsWith("com/sun") || className.startsWith("junit") || className.startsWith("javassist")
-            || className.startsWith("com/intellij") || className.contains("junit")) {
+        if (className.startsWith("com/sun") || className.startsWith("junit")
+            || className.startsWith("com/intellij") || className.contains("junit")
+            || className.contains("PrimitiveWrapper")) {
             return true;
         }
         if (isFrebelGeneratedClass(className) || className.startsWith("io/frebel")) {

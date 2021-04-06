@@ -37,4 +37,11 @@ public class ModifyArgsNumTest {
         ClassInner classInnerA = new ClassInner(bytesA);
         ReloadManager.INSTANCE.batchReload(classInnerB, classInnerA);
     }
+
+    public static B b() {
+        B b = new B(1, new B(), 3);
+        b.t(1);
+        return b;
+//        return new B(new Integer(1));
+    }
 }

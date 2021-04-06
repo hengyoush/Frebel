@@ -20,7 +20,7 @@ public class ArgsTypeUpdatedTest {
         B b = new B("123");
         Assert.assertEquals("123", a.testA(b));
         reloadV2();
-        b = new B("123");
+//        b = new B("123");
         Assert.assertEquals("123-v2", a.testA(b));
     }
 

@@ -1,6 +1,7 @@
 package io.frebel.bcp;
 
 import io.frebel.FrebelRuntime;
+import io.frebel.RedirectMethodGenerator;
 import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
 import javassist.ClassPool;
@@ -23,10 +24,8 @@ import jdk.internal.org.objectweb.asm.tree.TypeInsnNode;
 import jdk.internal.org.objectweb.asm.tree.VarInsnNode;
 
 import java.lang.reflect.Field;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.ListIterator;
-import java.util.Objects;
+import java.lang.reflect.Type;
+import java.util.*;
 
 import static io.frebel.util.PrimitiveTypeUtil.getUnBoxedMethodSignature;
 import static jdk.internal.org.objectweb.asm.Opcodes.*;
@@ -59,16 +58,25 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         if (skip(methodInsnNode)) { // skip frebel-generate method call
                             continue;
                         }
-                        InsnList il = new InsnList();
-                        il.add(new LdcInsnNode(methodInsnNode.name));
-                        il.add(new LdcInsnNode(methodInsnNode.desc));
-
                         CtClass returnType = Descriptor.getReturnType(methodInsnNode.desc, ClassPool.getDefault());
                         String returnValueCastTo = getReturnValueCastTo(methodInsnNode, method);
-
-                        il.add(new LdcInsnNode(returnValueCastTo));
                         int paramNum = Descriptor.numOfParameters(methodInsnNode.desc);
-                        il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", FrebelRuntime.getMethodName(paramNum), FrebelRuntime.getDesc(paramNum), false));
+                        InsnList il = new InsnList();
+
+                        if (containsPrimitiveParam(methodInsnNode.desc)) {
+                            String[] generate = RedirectMethodGenerator.getRedirectMethodInfo(methodInsnNode.desc);
+                            il.add(new MethodInsnNode(INVOKESTATIC, generate[0], generate[1], generate[2], false));
+                            il.add(new LdcInsnNode(methodInsnNode.name));
+                            il.add(new LdcInsnNode(methodInsnNode.desc));
+                            il.add(new LdcInsnNode(returnValueCastTo));
+                            il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", "invokeInstanceMethodsWithWrapperParams", "(Ljava/lang/Object;[Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false));
+                        } else {
+                            il.add(new LdcInsnNode(methodInsnNode.name));
+                            il.add(new LdcInsnNode(methodInsnNode.desc));
+                            il.add(new LdcInsnNode(returnValueCastTo));
+                            il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", FrebelRuntime.getMethodName(paramNum), FrebelRuntime.getDesc(paramNum), false));
+                        }
+
                         if (returnType != null && returnType.isPrimitive() && !"void".equals(returnType.getName())) {
                             String returnTypeName = PrimitiveTypeUtil.getBoxedClass(
                                     returnType.getName()).getName().replace(".", "/");
@@ -106,38 +114,37 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         continue;
                     }
 
-                    il.add(new LdcInsnNode(methodInsnNode.owner));
-                    il.add(new LdcInsnNode(methodInsnNode.desc));
-
                     try {
                         String returnValueCastTo = getReturnValueCastTo(methodInsnNode, method);
-                        il.add(new LdcInsnNode(returnValueCastTo));
                         int paramNum = Descriptor.numOfParameters(methodInsnNode.desc);
-                        il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", FrebelRuntime.getConsMethodName(paramNum), FrebelRuntime.getConsDesc(paramNum), false));
+                        if (containsPrimitiveParam(methodInsnNode.desc)) {
+                            String[] generate = RedirectMethodGenerator.getRedirectMethodInfo(methodInsnNode.desc);
+                            il.add(new MethodInsnNode(INVOKESTATIC, generate[0], generate[1], generate[2], false));
+                            il.add(new LdcInsnNode(methodInsnNode.owner));
+                            il.add(new LdcInsnNode(methodInsnNode.desc));
+                            il.add(new LdcInsnNode(returnValueCastTo));
+                            il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", "invokeConsWithWrapperParams", "([Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false));
+                        } else {
+                            il.add(new LdcInsnNode(methodInsnNode.owner));
+                            il.add(new LdcInsnNode(methodInsnNode.desc));
+                            il.add(new LdcInsnNode(returnValueCastTo));
+                            il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", FrebelRuntime.getConsMethodName(paramNum), FrebelRuntime.getConsDesc(paramNum), false));
+                        }
                         il.add(new TypeInsnNode(CHECKCAST, returnValueCastTo.replace(".", "/")));
 
-                        boolean dupRemoved = false;
                         boolean newRemoved = false;
                         AbstractInsnNode cur = insnNode.getPrevious();
-                        while ((!dupRemoved || !newRemoved) && cur != null) {
-                            if (!dupRemoved && cur.getOpcode() != DUP) {
+                        while ((!newRemoved) && cur != null) {
+                            if (cur.getOpcode() != NEW) {
                                 cur = cur.getPrevious();
-                                continue;
-                            } else if (!dupRemoved && cur.getOpcode() == DUP) {
+                            } else if (cur.getOpcode() == NEW && methodInsnNode.owner.equals(((TypeInsnNode) cur).desc)) {
                                 AbstractInsnNode previous = cur.getPrevious();
-                                insnList.remove(cur);
-                                cur = previous;
-                                dupRemoved = true;
-                                continue;
-                            }
-
-                            if (!newRemoved && cur.getOpcode() != NEW) {
-                                cur = cur.getPrevious();
-                            } else if (!newRemoved && cur.getOpcode() == NEW) {
-                                AbstractInsnNode previous = cur.getPrevious();
-                                insnList.remove(cur);
+                                insnList.remove(cur.getNext()); // remove dup
+                                insnList.remove(cur); // remove new
                                 cur = previous;
                                 newRemoved = true;
+                            } else {
+                                cur = cur.getPrevious();
                             }
                         }
                         insnList.insert(insnNode.getPrevious(), il);
@@ -166,6 +173,14 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
             return true;
         }
         return false;
+    }
+
+    public boolean containsPrimitiveParam(String methodDesc) throws NotFoundException {
+        CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDesc, ClassPool.getDefault());
+        if (parameterTypes == null) {
+            return false;
+        }
+        return Arrays.stream(parameterTypes).anyMatch(CtClass::isPrimitive);
     }
 
     private String getReturnValueCastTo(MethodInsnNode methodInsnNode, MethodNode method) throws NotFoundException {

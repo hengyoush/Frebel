@@ -3,11 +3,7 @@ package io.frebel.bcp;
 import io.frebel.bytecode.FieldAccessFlagUtils;
 import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
-import javassist.ClassPool;
-import javassist.CtClass;
-import javassist.CtMethod;
-import javassist.CtPrimitiveType;
-import javassist.Modifier;
+import javassist.*;
 
 import java.io.ByteArrayInputStream;
 
@@ -56,6 +52,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
                         returnTypeName = "void";
                     }
                     String[] parameterNames = Descriptor.getParameterNames(method.getSignature());
+                    CtClass[] parameterTypes = method.getParameterTypes();
                     hasArgs = parameterNames != null && parameterNames.length > 0;
                     StringBuilder paramTypesBuilder = new StringBuilder();
                     paramTypesBuilder.append("new Class[]{");
@@ -87,7 +84,13 @@ public class AddForwardBCP implements ByteCodeProcessor {
                             if (j != 0) {
                                 methodBuilder.append(",");
                             }
-                            methodBuilder.append("$").append(j + 1);
+                            if (parameterTypes[j].isPrimitive()) {
+                                methodBuilder
+                                        .append(((CtPrimitiveType) parameterTypes[j]).getWrapperName())
+                                        .append(".valueOf(").append("$").append(j + 1).append(")");
+                            } else {
+                                methodBuilder.append("$").append(j + 1);
+                            }
                         }
                         methodBuilder.append("},")
                                 .append(paramTypesBuilder.toString()).append(",")
