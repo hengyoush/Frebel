@@ -72,7 +72,7 @@ public class FrebelRuntime {
                     return currentVersion;
                 }
             } else {
-                // 该类没有修改过，所以直接返回原对象
+                // 该类没有修改过,所以直接返回原对象
                 return obj;
             }
         } catch (Exception e) {
@@ -134,6 +134,7 @@ public class FrebelRuntime {
                     Class<?>[] parameterTypes = constructor.getParameterTypes();
                     if (isMatchedMethod(parameterTypes, argsType)) {
                         matched = constructor;
+                        break;
                     }
                 }
 
@@ -490,6 +491,28 @@ public class FrebelRuntime {
 
     public static Object invokeConsWith10Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10, String className, String descriptor, String returnTypeCastTo) {
         return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith11Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10,Object arg11, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith12Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10,Object arg11,Object arg12, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+    public static Object invokeConsWith13Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10,Object arg11,Object arg12,Object arg13, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith14Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10,Object arg11,Object arg12,Object arg13,Object arg14, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13,arg14}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+
+    public static Object invokeConsWith15Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10,Object arg11,Object arg12,Object arg13,Object arg14,Object arg15, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13,arg14,arg15}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
+    }
+    public static Object invokeConsWith16Params(Object arg1,Object arg2,Object arg3,Object arg4,Object arg5,Object arg6,Object arg7, Object arg8,Object arg9,Object arg10,Object arg11,Object arg12,Object arg13,Object arg14,Object arg15,Object arg16, String className, String descriptor, String returnTypeCastTo) {
+        return invokeConsWithParams(className, descriptor, new Object[]{arg1,arg2,arg3,arg4,arg5,arg6,arg7,arg8,arg9,arg10,arg11,arg12,arg13,arg14,arg15,arg16}, getClassArrayFromDesc(descriptor), returnTypeCastTo);
     }
 
     public static Object invokeGetField(Object target, String owner, String fieldName, String className) {

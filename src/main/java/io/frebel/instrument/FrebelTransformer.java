@@ -44,7 +44,7 @@ public class FrebelTransformer implements ClassFileTransformer {
                 processed = redirectBCP.process(loader, processed);
                 processed = addUidBCP.process(loader, processed);
                 if (FrebelProps.debugClassFile()) {
-                    ClassPool.getDefault().makeClass(new ByteArrayInputStream(processed), false).debugWriteFile("./");
+                    ClassPool.getDefault().makeClass(new ByteArrayInputStream(processed), false).debugWriteFile();
                 }
                 LOGGER.info("Frebel first transform class finished, class name: {}.", dotClassName);
                 return processed;

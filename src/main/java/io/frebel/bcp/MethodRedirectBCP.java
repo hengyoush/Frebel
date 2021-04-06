@@ -22,6 +22,7 @@ import jdk.internal.org.objectweb.asm.tree.MethodNode;
 import jdk.internal.org.objectweb.asm.tree.TypeInsnNode;
 import jdk.internal.org.objectweb.asm.tree.VarInsnNode;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -161,7 +162,7 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
         if (methodInsnNode.owner.startsWith("java") ||
                 methodInsnNode.owner.startsWith("sun")
                 || methodInsnNode.name.contains("_$fr$")
-                || methodInsnNode.owner.contains("io/frebel")) {
+                || methodInsnNode.owner.contains("io/frebel")/* || Descriptor.numOfParameters(methodInsnNode.desc) > 10*/) {
             return true;
         }
         return false;
@@ -216,18 +217,12 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         LabelNode[] lableBound = lableBound(next);
                         LabelNode start = lableBound[0];
                         LabelNode end = lableBound[1];
-                        if (localVariableNodesWithSpecVar.get(0).start.getLabel() == end.getLabel()) {
-                            // 使用第一个localVariableNode的类型信息
-                            String desc = localVariableNodesWithSpecVar.get(0).desc;
-                            returnValueCastTo = Descriptor.getFieldDescReferenceClassName(desc);
-                        } else {
-                            for (LocalVariableNode localVariableNode : localVariableNodesWithSpecVar) {
-                                if (getLineNumberFromLableNode(localVariableNode.start) <= getLineNumberFromLableNode(start)
-                                        && (localVariableNode.end.getNext() == null ||  // we have reached method's end
-                                        getLineNumberFromLableNode(localVariableNode.end) >= getLineNumberFromLableNode(end))) {
-                                    returnValueCastTo = Descriptor.getFieldDescReferenceClassName(localVariableNode.desc);
-                                    break;
-                                }
+                        for (LocalVariableNode localVariableNode : localVariableNodesWithSpecVar) {
+                            if (end == localVariableNode.start ||
+                                    ( getInsnNodeIndex(localVariableNode.start) <= getInsnNodeIndex(next)
+                                            && getInsnNodeIndex(localVariableNode.end) >= getInsnNodeIndex(next))) {
+                                returnValueCastTo = Descriptor.getFieldDescReferenceClassName(localVariableNode.desc);
+                                break;
                             }
                         }
                     }
@@ -282,8 +277,14 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
         return new LabelNode[]{start, end};
     }
 
-    private int getLineNumberFromLableNode(LabelNode labelNode) {
-        LineNumberNode lineNumberNode = (LineNumberNode) labelNode.getNext();
-        return lineNumberNode.line;
+    public int getInsnNodeIndex(AbstractInsnNode node) {
+        try {
+            Field index = AbstractInsnNode.class.getDeclaredField("index");
+            index.setAccessible(true);
+            return (int) index.get(node);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
     }
 }

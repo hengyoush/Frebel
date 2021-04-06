@@ -68,10 +68,9 @@
                     <target>1.8</target>
                     <encoding>UTF-8</encoding>
                     <compilerArguments>
-                                                <verbose />
+                        <verbose />
                         <!-- 将jdk的依赖jar打入项目中，这样项目中使用的jdk的依赖就尅正常使用 -->
-                        <bootclasspath>${java.home}/lib/rt.jar:${java.home}/lib/jce.jar:${java.home}/lib/jsse.jar
-                        </bootclasspath>
+                        <bootclasspath>${jdk.bootclasspath}</bootclasspath>
                     </compilerArguments>
                 </configuration>
             </plugin>
@@ -137,4 +136,21 @@
             </plugin>
         </plugins>
     </build>
+    <profiles>
+        <profile>
+            <id>win</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <jdk.bootclasspath>${java.home}/lib/rt.jar;${java.home}/lib/jce.jar;${java.home}/lib/jsse.jar</jdk.bootclasspath>
+            </properties>
+        </profile>
+        <profile>
+            <id>mac</id>
+            <properties>
+                <jdk.bootclasspath>${java.home}/lib/rt.jar:${java.home}/lib/jce.jar:${java.home}/lib/jsse.jar</jdk.bootclasspath>
+            </properties>
+        </profile>
+    </profiles>
 </project>
