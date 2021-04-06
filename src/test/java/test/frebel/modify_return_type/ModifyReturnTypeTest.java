@@ -20,6 +20,9 @@ public class ModifyReturnTypeTest {
         reloadV3();
         returnValue = a.testModifyReturnType();
         Assert.assertTrue(returnValue instanceof B);
+        reloadV4();
+        returnValue = a.testModifyReturnType();
+        Assert.assertTrue((Integer) returnValue == 123);
     }
 
     public int reloadV2() throws Exception {
@@ -32,6 +35,14 @@ public class ModifyReturnTypeTest {
 
     public int reloadV3() throws Exception {
         String nameB = "./classfiles/modify-return-type/B_v3.bytecode";
+        byte[] bytesB = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameB).toURI()));
+        ClassInner classInnerB = new ClassInner(bytesB);
+        ReloadManager.INSTANCE.reload(classInnerB);
+        return 2;
+    }
+
+    public int reloadV4() throws Exception {
+        String nameB = "./classfiles/modify-return-type/B_v4.bytecode";
         byte[] bytesB = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameB).toURI()));
         ClassInner classInnerB = new ClassInner(bytesB);
         ReloadManager.INSTANCE.reload(classInnerB);
