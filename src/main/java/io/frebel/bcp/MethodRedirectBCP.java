@@ -255,7 +255,9 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
             }
         }
 
-        return returnValueCastTo.replace(".", "/");
+        return returnValueCastTo.equals("null") ?
+                returnTypeName.replace(".", "/") :
+                returnValueCastTo.replace(".", "/");
     }
 
     private LabelNode[] lableBound(AbstractInsnNode methodInsnNode) {
