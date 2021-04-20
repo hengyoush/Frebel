@@ -63,8 +63,16 @@ public class FrebelClass {
         return versionClassMap.lastKey();
     }
 
-    public ClassInner getCurrentVersionClass() {
+    public ClassInner getCurrentVersionClassInner() {
         return versionClassMap.lastEntry().getValue();
+    }
+
+    public Class getCurrentVersionClass() {
+        try {
+            return Class.forName(getCurrentVersionClassName());
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException("尝试获取最新版本的class时发生异常，className:" + getCurrentVersionClassName(), e);
+        }
     }
 
     public String getNextVersionClassName() {

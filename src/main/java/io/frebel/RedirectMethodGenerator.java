@@ -60,7 +60,14 @@ public class RedirectMethodGenerator {
                 }
             }
             method.append("};}");
-            CtMethod ctMethod = CtMethod.make(method.toString(), ctClass);
+
+            CtMethod ctMethod;
+            try {
+                ctMethod = CtMethod.make(method.toString(), ctClass);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+
             ctClass.addMethod(ctMethod);
             if (FrebelProps.debugClassFile()) {
                 ctClass.debugWriteFile();

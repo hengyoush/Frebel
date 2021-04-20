@@ -348,6 +348,101 @@ public class FrebelRuntime {
         }
     }
 
+    public static Object invokeStaticWithParams(String methodName, Class clazz, Object[] args, Class<?>[] argsType, Class callerClass, String returnTypeCastTo) {
+        try {
+            // 1. find matched method
+            FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(clazz.getName());
+            Class finalClazz = clazz;
+            if (frebelClass != null) {
+                finalClazz = frebelClass.getCurrentVersionClass();
+            }
+            Method[] methods = finalClazz.getDeclaredMethods();
+            Method findMethod = null;
+            for (Method method : methods) {
+                if (!method.getName().equals(methodName)) {
+                    continue;
+                }
+                Class<?>[] parameterTypes = method.getParameterTypes();
+                boolean find = isMatchedMethod(parameterTypes, argsType);
+                if (find) {
+                    findMethod = method;
+                    break;
+                }
+            }
+
+            // 2. assemble args
+            Object[] newArgs = new Object[args.length];
+            boolean retryFlag = false;
+            if (findMethod != null) {
+                Class<?>[] parameterTypes = findMethod.getParameterTypes();
+                for (int i = 0; i < parameterTypes.length; i++) {
+                    if (parameterTypes[i].isPrimitive()) {
+                        newArgs[i] = args[i];
+                    } else if (parameterTypes[i].isAssignableFrom(argsType[i])) {
+                        newArgs[i] = args[i];
+                    } else if (isSameFrebelClass(parameterTypes[i].getName(), argsType[i].getName())) {
+                        newArgs[i] = args[i] == null ? null : getSpecificVersion(getCurrentVersion(args[i]), parameterTypes[i].getName());
+                    } else {
+                        // retry because between 1 and 2 args class has benn reloaded,
+                        // so the class version has been outdated
+                        LOGGER.warn("Retry to find matched method, method: {}, args index: {}, method defined type: {}" +
+                                        ", current version type: {}.",
+                                findMethod,
+                                i,
+                                parameterTypes[i].getName(),
+                                newArgs[i].getClass().getName());
+                        retryFlag = true;
+                        break;
+                    }
+                }
+                if (retryFlag) {
+                    LOGGER.warn("retry methodName: {}, methodClass: {}, argsType: {}.", methodName,
+                            finalClazz.getName(), Arrays.toString(argsType));
+                    return invokeStaticWithParams(methodName, clazz, args, argsType, callerClass, returnTypeCastTo);
+                } else {
+                    try {
+                        findMethod.setAccessible(true);
+                        Object returnValue = findMethod.invoke(null, newArgs);
+                        if (returnValue != null) {
+                            frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
+                            if (returnTypeCastTo.equals("void")) {
+                                throw new FrebelInvocationException("expect null return value, but not null!");
+                            } else if (isSameFrebelClass(callerClass.getName(), returnValue.getClass().getName())) {
+                                return getSpecificVersion(returnValue, callerClass.getName());
+                            } else if (frebelClass != null) {
+                                String matchedName = frebelClass.getMatchedClassNameByParentClassName(returnTypeCastTo);
+                                return getSpecificVersion(returnValue, matchedName);
+                            } else {
+                                if (Class.forName(returnTypeCastTo.replace("/", ".")).isInstance(returnValue)) {
+                                    return returnValue;
+                                } else {
+                                    String errorMsg = "error return value: " + returnTypeCastTo + "," +
+                                            "real return value type is: " + returnValue.getClass() + ".";
+                                    LOGGER.error(errorMsg);
+                                    throw new FrebelInvocationException(errorMsg);
+                                }
+                            }
+                        } else {
+                            return null;
+                        }
+                    } catch (IllegalArgumentException e) {
+                        // args type problem, retry
+                        LOGGER.warn("Retry to find correct method because try to invoke method: {} failed", findMethod);
+                        return invokeStaticWithParams(methodName, clazz, args, argsType, callerClass, returnTypeCastTo);
+                    }
+                }
+            } else {
+                // no matched method found
+                String errorMsg = "No method found in Class:" + clazz.getName() +
+                        ", method arguments types are: " + Arrays.toString(argsType);
+                throw new FrebelInvocationException("no method found!");
+            }
+        } catch (Exception e) {
+            LOGGER.error(e.getMessage(), e);
+            throw new FrebelInvocationException(e);
+        }
+    }
+
     public static Object invokeCast(Object toCast, String className) {
         FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(toCast.getClass().getName());
         if (frebelClass != null) {
@@ -407,6 +502,20 @@ public class FrebelRuntime {
             }
         }
         return invokeWithParams(methodName, target, wrapperParams, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+    }
+    /*********** static redirect methods *************/
+    public static Object invokeStaticMethodsWithWrapperParams(Object[] wrapperParams, String methodName, String descriptor, String returnTypeCastTo, String ownerClassName) {
+        Object[] newParams = new Object[wrapperParams.length];
+        for (int i = 0; i < wrapperParams.length; i++) {
+            if (wrapperParams[i] instanceof PrimitiveWrapper) {
+                wrapperParams[i] = ((PrimitiveWrapper) wrapperParams[i]).unwrap();
+            }
+        }
+        try {
+            return invokeStaticWithParams(methodName, Class.forName(ownerClassName), wrapperParams, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+        } catch (ClassNotFoundException e) {
+            throw new RuntimeException(e);
+        }
     }
     public static Object invokeWithParams(String methodName, Object invokeObj, Object[] args, Class<?>[] argsType, String returnTypeName) {
         return invokeWithParams(methodName, invokeObj, args, argsType, Reflection.getCallerClass(2), returnTypeName);

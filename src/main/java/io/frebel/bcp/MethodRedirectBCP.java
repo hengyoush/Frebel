@@ -52,7 +52,7 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                 AbstractInsnNode insnNode = iterator.next();
                 int opcode = insnNode.getOpcode();
                 boolean flag = false;
-                if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE) {
+                if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE || opcode == INVOKESTATIC) {
                     try {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) insnNode;
                         if (skip(methodInsnNode)) { // skip frebel-generate method call
@@ -69,7 +69,12 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                             il.add(new LdcInsnNode(methodInsnNode.name));
                             il.add(new LdcInsnNode(methodInsnNode.desc));
                             il.add(new LdcInsnNode(returnValueCastTo));
-                            il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", "invokeInstanceMethodsWithWrapperParams", "(Ljava/lang/Object;[Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false));
+                            if (opcode == INVOKESTATIC) {
+                                il.add(new LdcInsnNode(methodInsnNode.owner));
+                                il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", "invokeStaticMethodsWithWrapperParams", "([Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false));
+                            } else {
+                                il.add(new MethodInsnNode(INVOKESTATIC, "io/frebel/FrebelRuntime", "invokeInstanceMethodsWithWrapperParams", "(Ljava/lang/Object;[Ljava/lang/Object;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;", false));
+                            }
                         } else {
                             il.add(new LdcInsnNode(methodInsnNode.name));
                             il.add(new LdcInsnNode(methodInsnNode.desc));
@@ -166,21 +171,23 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
     }
 
     private boolean skip(MethodInsnNode methodInsnNode) {
-        if (methodInsnNode.owner.startsWith("java") ||
-                methodInsnNode.owner.startsWith("sun")
-                || methodInsnNode.name.contains("_$fr$")
-                || methodInsnNode.owner.contains("io/frebel")/* || Descriptor.numOfParameters(methodInsnNode.desc) > 10*/) {
+        if (/*methodInsnNode.owner.startsWith("java") ||*/
+//                methodInsnNode.owner.startsWith("sun") ||
+                        methodInsnNode.name.contains("_$fr$") ||
+                        methodInsnNode.owner.contains("io/frebel")/* || Descriptor.numOfParameters(methodInsnNode.desc) > 10*/) {
             return true;
         }
         return false;
     }
 
     public boolean containsPrimitiveParam(String methodDesc) throws NotFoundException {
+
         CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDesc, ClassPool.getDefault());
-        if (parameterTypes == null) {
-            return false;
-        }
-        return Arrays.stream(parameterTypes).anyMatch(CtClass::isPrimitive);
+        return parameterTypes != null && parameterTypes.length > 0;
+//        if (parameterTypes == null) {
+//            return false;
+//        }
+//        return Arrays.stream(parameterTypes).anyMatch(CtClass::isPrimitive);
     }
 
     private String getReturnValueCastTo(MethodInsnNode methodInsnNode, MethodNode method) throws NotFoundException {
@@ -250,14 +257,15 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         System.out.println("encounter areturn but method has no return type");
                     }
                 } else {
-                    returnValueCastTo = returnTypeName.replace(".", "/");
+                    returnValueCastTo = Object.class.getName();
+//                    returnValueCastTo = returnTypeName.replace(".", "/");
                 }
             }
         }
 
-        return returnValueCastTo.equals("null") ?
-                returnTypeName.replace(".", "/") :
+        return returnValueCastTo.equals("null") ?  Object.class.getName().replace(".", "/") :
                 returnValueCastTo.replace(".", "/");
+//        return returnValueCastTo.equals("null") ? returnTypeName.replace(".", "/") : returnValueCastTo.replace(".", "/");
     }
 
     private LabelNode[] lableBound(AbstractInsnNode methodInsnNode) {
