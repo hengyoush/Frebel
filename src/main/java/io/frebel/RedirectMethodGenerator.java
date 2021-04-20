@@ -48,21 +48,25 @@ public class RedirectMethodGenerator {
                 c = (char) (c + 1);
             }
             StringBuilder method = new StringBuilder("public static Object[] invoke(" + String.join(",", parameterNames) + ")");
-            method.append("{").append("return new Object[]{");
-            char cur = 'a';
-            for (int i = 0; i < numOfParameters; i++) {
-                if (isPrimitive.containsKey(cur)) {
-                    method.append("new ").append("io.frebel.common.").append(isPrimitive.get(cur)).append("PrimitiveWrapper").append("(").append(cur)
-                            .append(")");
-                } else {
-                    method.append(cur);
+            if (parameterNames.size() > 0){
+                method.append("{").append("return new Object[]{");
+                char cur = 'a';
+                for (int i = 0; i < numOfParameters; i++) {
+                    if (isPrimitive.containsKey(cur)) {
+                        method.append("new ").append("io.frebel.common.").append(isPrimitive.get(cur)).append("PrimitiveWrapper").append("(").append(cur)
+                                .append(")");
+                    } else {
+                        method.append(cur);
+                    }
+                    cur = (char) (cur + 1);
+                    if (i < numOfParameters - 1) {
+                        method.append(",");
+                    }
                 }
-                cur = (char) (cur + 1);
-                if (i < numOfParameters - 1) {
-                    method.append(",");
-                }
+                method.append("};}");
+            } else {
+                method.append("{").append("return new Object[0]").append(";}");
             }
-            method.append("};}");
 
             CtMethod ctMethod;
             try {

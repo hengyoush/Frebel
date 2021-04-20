@@ -187,7 +187,9 @@ public class FrebelRuntime {
                     throw new IllegalStateException(errorMsg);
                 }
             } else {
-                return Class.forName(className).getConstructor(argsType).newInstance(args);
+                Constructor<?> constructor = Class.forName(className).getConstructor(argsType);
+                constructor.setAccessible(true);
+                return constructor.newInstance(args);
             }
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
@@ -206,6 +208,7 @@ public class FrebelRuntime {
             Object currentVersion = getCurrentVersion(invokeObj);
             method = currentVersion.getClass().getMethod(methodName);
             try {
+                method.setAccessible(true);
                 returnValue = method.invoke(currentVersion);
                 if (returnValue != null) {
                     FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(returnValue.getClass().getName());
@@ -447,6 +450,9 @@ public class FrebelRuntime {
     }
 
     public static Object invokeCast(Object toCast, String className) {
+        if (toCast == null) {
+            return null;
+        }
         FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(toCast.getClass().getName());
         if (frebelClass != null) {
             try {
@@ -739,14 +745,19 @@ public class FrebelRuntime {
         try {
             CtClass[] ctClasses = Descriptor.getParameterTypes(desc, ClassPool.getDefault());
             if (ctClasses == null || ctClasses.length == 0) {
-                throw new IllegalStateException();
+                return new Class[0];
             }
             Class<?>[] classes = new Class[ctClasses.length];
             for (int i = 0; i < ctClasses.length; i++) {
                 if (ctClasses[i].isPrimitive()) {
                     classes[i] = PrimitiveTypeUtil.getPrimitiveClass(ctClasses[i].getName());
-                } else {
+                } else if (ctClasses[i].isArray()) {
+                    classes[i] = Class.forName(
+                            Descriptor.of(Descriptor.getParameterTypes(desc, ClassPool.getDefault())[i]).replace("/", "."));
+                }
+                else {
                     classes[i] = Class.forName(ctClasses[i].getName());
+
                 }
             }
             return classes;

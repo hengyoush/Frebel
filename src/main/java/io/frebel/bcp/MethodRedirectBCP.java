@@ -38,10 +38,10 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
             }
             ListIterator<AbstractInsnNode> iterator = insnList.iterator();
             // scan method call
+            boolean flag = false;
             while (iterator.hasNext()) {
                 AbstractInsnNode insnNode = iterator.next();
                 int opcode = insnNode.getOpcode();
-                boolean flag = false;
                 if (opcode == INVOKEVIRTUAL || opcode == INVOKEINTERFACE || opcode == INVOKESTATIC) {
                     try {
                         MethodInsnNode methodInsnNode = (MethodInsnNode) insnNode;
@@ -151,9 +151,9 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         throw new RuntimeException(e);
                     }
                 }
-                // we have pushed three value on the operand stack
-                if (flag) method.maxStack += 3;
             }
+            // we have pushed three value on the operand stack
+            if (flag) method.maxStack += 3;
         }
         ClassWriter classWriter = new ClassWriter(0);
         cn.accept(classWriter);
@@ -171,9 +171,9 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
     }
 
     public boolean containsPrimitiveParam(String methodDesc) throws NotFoundException {
-
-        CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDesc, ClassPool.getDefault());
-        return parameterTypes != null && parameterTypes.length > 0;
+        return true;
+//        CtClass[] parameterTypes = Descriptor.getParameterTypes(methodDesc, ClassPool.getDefault());
+//        return parameterTypes != null && parameterTypes.length > 0;
 //        if (parameterTypes == null) {
 //            return false;
 //        }
@@ -194,6 +194,9 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                 isPrimitive = false;
             } else {
                 returnTypeName = ctClass.getName();
+                if (ctClass.isArray()) {
+                    returnTypeName = Descriptor.of(ctClass);
+                }
                 isPrimitive = ctClass.isPrimitive() && !ctClass.getName().equals("void");
             }
         }
@@ -204,8 +207,8 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
         } else {
             // has returnType
             if (isPrimitive) {
-                returnValueCastTo = Object.class.getName();
-//                returnValueCastTo = PrimitiveTypeUtil.getBoxedClass(returnTypeName).getName();
+//                returnValueCastTo = Object.class.getName();
+                returnValueCastTo = PrimitiveTypeUtil.getBoxedClass(returnTypeName).getName();
             } else {
                 AbstractInsnNode next = methodInsnNode.getNext();
                 if (next instanceof FieldInsnNode) {
@@ -248,15 +251,15 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
                         System.out.println("encounter areturn but method has no return type");
                     }
                 } else {
-                    returnValueCastTo = Object.class.getName();
-//                    returnValueCastTo = returnTypeName.replace(".", "/");
+//                    returnValueCastTo = Object.class.getName();
+                    returnValueCastTo = returnTypeName.replace(".", "/");
                 }
             }
         }
 
-        return returnValueCastTo.equals("null") ?  Object.class.getName().replace(".", "/") :
-                returnValueCastTo.replace(".", "/");
-//        return returnValueCastTo.equals("null") ? returnTypeName.replace(".", "/") : returnValueCastTo.replace(".", "/");
+//        return returnValueCastTo.equals("null") ?  Object.class.getName().replace(".", "/") :
+//                returnValueCastTo.replace(".", "/");
+        return returnValueCastTo.equals("null") ? returnTypeName.replace(".", "/") : returnValueCastTo.replace(".", "/");
     }
 
     private LabelNode[] lableBound(AbstractInsnNode methodInsnNode) {
