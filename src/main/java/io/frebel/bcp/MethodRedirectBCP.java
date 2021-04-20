@@ -9,23 +9,13 @@ import javassist.CtClass;
 import javassist.NotFoundException;
 import jdk.internal.org.objectweb.asm.ClassReader;
 import jdk.internal.org.objectweb.asm.ClassWriter;
-import jdk.internal.org.objectweb.asm.tree.AbstractInsnNode;
-import jdk.internal.org.objectweb.asm.tree.ClassNode;
-import jdk.internal.org.objectweb.asm.tree.FieldInsnNode;
-import jdk.internal.org.objectweb.asm.tree.InsnList;
-import jdk.internal.org.objectweb.asm.tree.InsnNode;
-import jdk.internal.org.objectweb.asm.tree.LabelNode;
-import jdk.internal.org.objectweb.asm.tree.LdcInsnNode;
-import jdk.internal.org.objectweb.asm.tree.LineNumberNode;
-import jdk.internal.org.objectweb.asm.tree.LocalVariableNode;
-import jdk.internal.org.objectweb.asm.tree.MethodInsnNode;
-import jdk.internal.org.objectweb.asm.tree.MethodNode;
-import jdk.internal.org.objectweb.asm.tree.TypeInsnNode;
-import jdk.internal.org.objectweb.asm.tree.VarInsnNode;
+import jdk.internal.org.objectweb.asm.tree.*;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.Type;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ListIterator;
+import java.util.Objects;
 
 import static io.frebel.util.PrimitiveTypeUtil.getUnBoxedMethodSignature;
 import static jdk.internal.org.objectweb.asm.Opcodes.*;
@@ -214,7 +204,8 @@ public class MethodRedirectBCP implements ByteCodeProcessor {
         } else {
             // has returnType
             if (isPrimitive) {
-                returnValueCastTo = PrimitiveTypeUtil.getBoxedClass(returnTypeName).getName();
+                returnValueCastTo = Object.class.getName();
+//                returnValueCastTo = PrimitiveTypeUtil.getBoxedClass(returnTypeName).getName();
             } else {
                 AbstractInsnNode next = methodInsnNode.getNext();
                 if (next instanceof FieldInsnNode) {

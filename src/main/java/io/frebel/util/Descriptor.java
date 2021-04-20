@@ -515,6 +515,9 @@ public class Descriptor {
      * @return
      */
     public static String getFieldDescReferenceClassName(String desc) {
+        if (desc.startsWith("[")) {
+            return desc;
+        }
         assert desc.startsWith("L");
         desc = desc.substring(1);
         assert desc.endsWith(";");

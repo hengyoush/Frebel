@@ -2,6 +2,7 @@ package io.frebel;
 
 import io.frebel.common.FrebelInvocationException;
 import io.frebel.common.PrimitiveWrapper;
+import io.frebel.util.ArrayUtils;
 import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
 import javassist.*;
@@ -263,9 +264,11 @@ public class FrebelRuntime {
         try {
             // 1. find matched method
             Object currentVersion = getCurrentVersion(invokeObj);
-            Method[] methods = currentVersion.getClass().getDeclaredMethods();
+            Object[] methods = currentVersion.getClass().getDeclaredMethods();
+            methods = ArrayUtils.merge(methods, currentVersion.getClass().getMethods());
             Method findMethod = null;
-            for (Method method : methods) {
+            for (Object o : methods) {
+                Method method = ((Method) o);
                 if (!method.getName().equals(methodName)) {
                     continue;
                 }
@@ -512,7 +515,7 @@ public class FrebelRuntime {
             }
         }
         try {
-            return invokeStaticWithParams(methodName, Class.forName(ownerClassName), wrapperParams, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
+            return invokeStaticWithParams(methodName, Class.forName(ownerClassName.replace("/", ".")), wrapperParams, getClassArrayFromDesc(descriptor), Reflection.getCallerClass(2), returnTypeCastTo);
         } catch (ClassNotFoundException e) {
             throw new RuntimeException(e);
         }

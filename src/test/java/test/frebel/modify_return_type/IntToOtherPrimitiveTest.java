@@ -1,11 +1,14 @@
 package test.frebel.modify_return_type;
 
 import io.frebel.ClassInner;
+import io.frebel.FrebelRuntime;
 import io.frebel.reload.ReloadManager;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 
@@ -17,10 +20,10 @@ import java.util.Objects;
 public class IntToOtherPrimitiveTest {
     @Test
     public void testIntToOtherPrimitive() throws Exception {
-        IntToOtherPrimitiveTest_A a = new IntToOtherPrimitiveTest_A();
-        Assert.assertTrue(Objects.equals(123, a.test()));
+        IntToOtherPrimitiveTest_C c = new IntToOtherPrimitiveTest_C();
+        c.test();
         reload();
-        Assert.assertTrue(Objects.equals('a', a.test()));
+        c.test();
     }
 
     public void reload() throws Exception {
@@ -31,6 +34,10 @@ public class IntToOtherPrimitiveTest {
         String nameB = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_B_v2.class";
         byte[] bytesB = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameB).toURI()));
         ClassInner classInnerB = new ClassInner(bytesB);
-        ReloadManager.INSTANCE.batchReload(classInnerA, classInnerB);
+
+        String nameC = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_C_v2.class";
+        byte[] bytesC = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameC).toURI()));
+        ClassInner classInnerC = new ClassInner(bytesC);
+        ReloadManager.INSTANCE.batchReload(classInnerA, classInnerB, classInnerC);
     }
 }

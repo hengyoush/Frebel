@@ -17,6 +17,7 @@ import java.util.*;
 public class RedirectMethodGenerator {
     private static Logger logger = LoggerFactory.getLogger(RedirectMethodGenerator.class);
     private static Map<String, String[]> cache = new HashMap<>();
+    private final static Random random = new Random();
 
     public static String[] getRedirectMethodInfo(String desc) {
         return cache.computeIfAbsent(desc, RedirectMethodGenerator::generate);
@@ -36,11 +37,13 @@ public class RedirectMethodGenerator {
             char c = 'a';
             Map<Character, String> isPrimitive = new HashMap<>();
             for (CtClass parameterType : Objects.requireNonNull(parameterTypes)) {
-                parameterNames.add(parameterType.getName() + " " + c);
                 if (parameterType.isPrimitive()) {
+                    parameterNames.add(parameterType.getName() + " " + c);
                     char[] chars = parameterType.getName().toCharArray();
                     chars[0] = Character.toUpperCase(chars[0]); // int -> Int
                     isPrimitive.put(c, new String(chars));
+                } else {
+                    parameterNames.add(Object.class.getName() + " " + c);
                 }
                 c = (char) (c + 1);
             }
@@ -82,6 +85,6 @@ public class RedirectMethodGenerator {
 
     public static String generateClassName() {
         // FIXME use more safe way
-        return "Redirect" + System.currentTimeMillis();
+        return "Redirect" + System.currentTimeMillis() + random.nextInt(10000);
     }
 }

@@ -29,11 +29,11 @@ public class AddUidBCP implements ByteCodeProcessor {
             if (ctClass.isInterface() || ctClass.isAnnotation()) {
                 return bytes;
             }
-            ctClass.addField(CtField.make("private String _$fr$_uid=java.util.UUID.randomUUID().toString();", ctClass));
+            ctClass.addField(CtField.make("private final String _$fr$_uid=java.util.UUID.randomUUID().toString();", ctClass));
             ctClass.addMethod(CtMethod.make("public String _$fr$_getUid() {return this._$fr$_uid;}", ctClass));
             CtConstructor[] constructors = ctClass.getConstructors();
             for (CtConstructor constructor : constructors) {
-                constructor.insertAfter("io.frebel.FrebelObjectManager.register(_$fr$_getUid(),$0);", false);
+                constructor.insertAfter("io.frebel.FrebelObjectManager.register(_$fr$_getUid(),$0);");
             }
             return ctClass.toBytecode();
         } catch (Exception e) {
