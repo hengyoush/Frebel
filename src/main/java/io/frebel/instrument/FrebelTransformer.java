@@ -28,6 +28,7 @@ public class FrebelTransformer implements ClassFileTransformer {
                             Class<?> classBeingRedefined,
                             ProtectionDomain protectionDomain,
                             byte[] classfileBuffer) {
+        if (className == null) return classfileBuffer;
         String dotClassName = className.replace("/", ".");
         try {
             if (loader == null || ClassUtil.needSkipTransform(className)) {

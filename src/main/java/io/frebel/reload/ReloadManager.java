@@ -57,6 +57,7 @@ public enum ReloadManager {
 
     public ClassInner reload(ClassInner classInner, boolean updateClassVersion, boolean addForwardDelayed) throws Exception {
         String className = classInner.getOriginClassName();
+        Class.forName(className); // load the origin class if not load yet
         FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(className);
 
         boolean redefineFlag = false;

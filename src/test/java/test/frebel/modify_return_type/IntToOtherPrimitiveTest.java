@@ -22,20 +22,22 @@ public class IntToOtherPrimitiveTest {
     public void testIntToOtherPrimitive() throws Exception {
         IntToOtherPrimitiveTest_C c = new IntToOtherPrimitiveTest_C();
         c.test();
-        reload();
+        reload("v2");
+        c.test();
+        reload("v3");
         c.test();
     }
 
-    public void reload() throws Exception {
-        String nameA = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_A_v2.class";
+    public void reload(String version) throws Exception {
+        String nameA = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_A_"+version+".class";
         byte[] bytesA = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameA).toURI()));
         ClassInner classInnerA = new ClassInner(bytesA);
 
-        String nameB = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_B_v2.class";
+        String nameB = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_B_"+version+".class";
         byte[] bytesB = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameB).toURI()));
         ClassInner classInnerB = new ClassInner(bytesB);
 
-        String nameC = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_C_v2.class";
+        String nameC = "./classfiles/modify-return-type/IntToOtherPrimitiveTest_C_"+version+".class";
         byte[] bytesC = Files.readAllBytes(Paths.get(this.getClass().getClassLoader().getResource(nameC).toURI()));
         ClassInner classInnerC = new ClassInner(bytesC);
         ReloadManager.INSTANCE.batchReload(classInnerA, classInnerB, classInnerC);

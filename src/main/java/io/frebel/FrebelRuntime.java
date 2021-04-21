@@ -36,7 +36,10 @@ public class FrebelRuntime {
             String currentVersionClassName = frebelClass.getCurrentVersionClassName();
             Object currentVersion = FrebelObjectManager.getSpecificVersionObject(uid, currentVersionClassName);
             if (currentVersion == null) {
-                currentVersion = obj;
+                currentVersion = FrebelObjectManager.getLatestVersionObject(currentVersionClassName, uid);
+                if (currentVersion == null) {
+                    currentVersion = obj;
+                }
             }
 
             if (frebelClass.isReloaded()) {
@@ -59,7 +62,8 @@ public class FrebelRuntime {
                             LOGGER.debug("Copy state finished, uid: {}", uid);
                             // 注册新对象
                             FrebelObjectManager.register(uid, newClassInstance);
-                            LOGGER.debug("Register newer version object finished, uid: {}", uid);
+                            LOGGER.debug("Register newer version object finished, uid: {}, className: {}", uid,
+                                    newClassInstance.getClass().getName());
                             FrebelObjectManager.clearState(currentVersion);
                             LOGGER.debug("Clear old object state finished, uid: {}", uid);
                             return newClassInstance;
@@ -267,6 +271,9 @@ public class FrebelRuntime {
         try {
             // 1. find matched method
             Object currentVersion = getCurrentVersion(invokeObj);
+            if (currentVersion == null) {
+                System.out.println("1111111111111111111");
+            }
             Object[] methods = currentVersion.getClass().getDeclaredMethods();
             methods = ArrayUtils.merge(methods, currentVersion.getClass().getMethods());
             Method findMethod = null;
@@ -504,6 +511,10 @@ public class FrebelRuntime {
 
     /*********** instance redirect methods *************/
     public static Object invokeInstanceMethodsWithWrapperParams(Object target, Object[] wrapperParams, String methodName, String descriptor, String returnTypeCastTo) {
+        if (target == null) {
+            System.out.println("111111111," + methodName);
+            throw new NullPointerException();
+        }
         Object[] newParams = new Object[wrapperParams.length];
         for (int i = 0; i < wrapperParams.length; i++) {
             if (wrapperParams[i] instanceof PrimitiveWrapper) {
