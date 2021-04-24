@@ -512,7 +512,6 @@ public class FrebelRuntime {
     /*********** instance redirect methods *************/
     public static Object invokeInstanceMethodsWithWrapperParams(Object target, Object[] wrapperParams, String methodName, String descriptor, String returnTypeCastTo) {
         if (target == null) {
-            System.out.println("111111111," + methodName);
             throw new NullPointerException();
         }
         Object[] newParams = new Object[wrapperParams.length];

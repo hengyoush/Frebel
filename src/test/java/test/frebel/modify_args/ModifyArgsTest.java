@@ -16,6 +16,12 @@ public class ModifyArgsTest {
         a.testMethod();
         reload("v3");
         a.testMethod();
+        reload("v4");
+        a.testMethod();
+        reload("v5");
+        a.testMethod();
+        reload("v6");
+        a.testMethod();
     }
 
     public void reload(String version) throws Exception {

@@ -127,6 +127,9 @@ public class FileChangeDetector {
                         }
                         watchKey.reset();
                         LOGGER.info("FileChangeDetector continues to listen.");
+                    } catch (ClosedWatchServiceException e) {
+                        LOGGER.warn("FileChangeDetector file watch service has closed!");
+                        break;
                     } catch (Exception e) {
                         LOGGER.error("FileChangeDetector handle file change events encounters error.", e);
                     }
