@@ -22,6 +22,10 @@ public class ModifyArgsTest {
         a.testMethod();
         reload("v6");
         a.testMethod();
+        reload("v7");
+        a.testMethod();
+        reload("v8");
+        a.testMethod();
     }
 
     public void reload(String version) throws Exception {
