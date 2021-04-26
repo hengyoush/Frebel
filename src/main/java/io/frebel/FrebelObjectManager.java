@@ -32,12 +32,16 @@ public class FrebelObjectManager {
     private static ReentrantReadWriteLock lock = new ReentrantReadWriteLock();
 
     static {
-        cleanThreadPool.scheduleWithFixedDelay(() -> {
-
+        new Thread(() -> {
             while (true) {
-                Reference<?> reference = queue.poll();
+                Reference<?> reference = null;
+                try {
+                    reference = queue.remove();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 if (reference == null) {
-                    break;
+                    continue;
                 } else {
                     Object o = reference.get();
                     String uid = getUid(o);
@@ -48,6 +52,8 @@ public class FrebelObjectManager {
                     }
                 }
             }
+        }).start();
+        cleanThreadPool.scheduleWithFixedDelay(() -> {
             Iterator<Map<String, Reference<Object>>> iterator = objectMap.values().iterator();
             while (iterator.hasNext()) {
                 Map<String, Reference<Object>> map = iterator.next();
@@ -71,12 +77,12 @@ public class FrebelObjectManager {
         if (uuid == null) {
             return;
         }
-        Map<String, Reference<Object>> map = objectMap.get(uuid);
-        if (map == null) {
-            objectMap.put(uuid, new ConcurrentHashMap<>());
-            map = objectMap.get(uuid);
-        }
-        map.put(o.getClass().getName(), new WeakReference<>(o, queue));
+        objectMap.computeIfAbsent(uuid, u -> {
+            Map<String, Reference<Object>> m = new ConcurrentHashMap<>();
+            m.put(o.getClass().getName(), new WeakReference<>(o, queue));
+            return m;
+        });
+        objectMap.get(uuid).computeIfAbsent(o.getClass().getName(), n -> new SoftReference<>(o, queue));
         latestObjectMap.put(uuid, o);
     }
 

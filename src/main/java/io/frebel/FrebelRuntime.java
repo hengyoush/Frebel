@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import sun.reflect.Reflection;
 
 import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.Objects;
@@ -131,9 +132,11 @@ public class FrebelRuntime {
         try {
             if (frebelClass != null) {
                 Class<?> currentVersionClass = Class.forName(frebelClass.getCurrentVersionClassName());
-                Constructor<?>[] constructors = currentVersionClass.getConstructors();
+                Object[] constructors = ArrayUtils.merge(currentVersionClass.getConstructors(),
+                        currentVersionClass.getDeclaredConstructors());
                 Constructor<?> matched = null;
-                for (Constructor<?> constructor : constructors) {
+                for (Object o : constructors) {
+                    Constructor<?> constructor = (Constructor<?>) o;
                     Class<?>[] parameterTypes = constructor.getParameterTypes();
                     if (isMatchedMethod(parameterTypes, argsType)) {
                         matched = constructor;
@@ -191,7 +194,12 @@ public class FrebelRuntime {
                     throw new IllegalStateException(errorMsg);
                 }
             } else {
-                Constructor<?> constructor = Class.forName(className).getConstructor(argsType);
+                Constructor<?> constructor;
+                try {
+                    constructor = Class.forName(className).getConstructor(argsType);
+                } catch (Exception e) {
+                    constructor = Class.forName(className).getDeclaredConstructor(argsType);
+                }
                 constructor.setAccessible(true);
                 return constructor.newInstance(args);
             }
@@ -452,7 +460,11 @@ public class FrebelRuntime {
             }
         } catch (Exception e) {
             LOGGER.error(e.getMessage(), e);
-            throw new FrebelInvocationException(e);
+            if ((e.getCause() instanceof RuntimeException)) {
+                throw ((RuntimeException) e.getCause());
+            } else {
+                throw new FrebelInvocationException(e);
+            }
         }
     }
 

@@ -3,11 +3,14 @@ package test.frebel.modify_args;
 import io.frebel.ClassInner;
 import io.frebel.reload.ReloadManager;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.file.Files;
 import java.nio.file.Paths;
 
 public class ModifyArgsTest {
+    Logger logger = LoggerFactory.getLogger(ModifyArgsTest.class);
     @Test
     public void testModifyArgs() throws Exception {
         ModifyArgsTest_A a = new ModifyArgsTest_A();
@@ -26,6 +29,10 @@ public class ModifyArgsTest {
         a.testMethod();
         reload("v8");
         a.testMethod();
+        reload("v9");
+        a.testMethod();
+
+        logger.error("123");
     }
 
     public void reload(String version) throws Exception {

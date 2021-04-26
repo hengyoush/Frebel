@@ -5,9 +5,12 @@ import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
 import javassist.ClassPool;
 import javassist.CtClass;
+import javassist.NotFoundException;
 import jdk.internal.org.objectweb.asm.ClassReader;
 import jdk.internal.org.objectweb.asm.ClassWriter;
 import jdk.internal.org.objectweb.asm.tree.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.ListIterator;
@@ -15,6 +18,8 @@ import java.util.ListIterator;
 import static jdk.internal.org.objectweb.asm.Opcodes.*;
 
 public class CastAndInstanceOfBCP implements ByteCodeProcessor {
+    private static final Logger LOGGER = LoggerFactory.getLogger(CastAndInstanceOfBCP.class);
+
     @Override
     public byte[] process(ClassLoader classLoader, byte[] bytes) {
         ClassNode cn = new ClassNode(ASM4);
@@ -98,7 +103,11 @@ public class CastAndInstanceOfBCP implements ByteCodeProcessor {
                 }
             }
             return false;
-        } catch (Exception e) {
+        }catch (NotFoundException e) {
+            LOGGER.error("class: {} not found!", insnNode.desc);
+            return true;
+        }
+        catch (Exception e) {
             e.printStackTrace();
             throw new RuntimeException(e);
         }
