@@ -6,6 +6,7 @@ import javassist.NotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Comparator;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -26,7 +27,7 @@ public class FrebelClass {
     public FrebelClass(byte[] originClassBytes, ClassLoader classLoader) {
         this.originClassBytes = originClassBytes;
         this.isReloaded = false;
-        this.versionClassMap = new TreeMap<>();
+        this.versionClassMap = new TreeMap<>(Comparator.comparingInt(FrebelClass::getClassVersion));
         this.classLoader = classLoader;
         this.originClassInner = new ClassInner(originClassBytes);
         this.originName = originClassInner.getOriginClassName();
@@ -130,5 +131,10 @@ public class FrebelClass {
             previousClassName = className.substring(0, className.lastIndexOf('_') + 1) + (classIndex - 1);
         }
         return previousClassName;
+    }
+
+    private static int getClassVersion(String className) {
+        if (!className.contains("$fr")) return 0;
+        return Integer.parseInt(className.substring(className.lastIndexOf('_') + 1));
     }
 }

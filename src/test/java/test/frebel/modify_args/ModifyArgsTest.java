@@ -31,8 +31,14 @@ public class ModifyArgsTest {
         a.testMethod();
         reload("v9");
         a.testMethod();
+        reload("v10");
+        a.testMethod();
+        reload("v11");
+        a.testMethod();
+        reload("v12");
+        a.testMethod();
 
-        logger.error("123");
+        logger.error("success");
     }
 
     public void reload(String version) throws Exception {
