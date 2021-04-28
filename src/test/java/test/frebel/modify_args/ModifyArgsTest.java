@@ -37,6 +37,14 @@ public class ModifyArgsTest {
         a.testMethod();
         reload("v12");
         a.testMethod();
+        reload("v13");
+        a.testMethod();
+        reload("v14");
+        a.testMethod();
+        reload("v15");
+        a.testMethod();
+        reload("v16");
+        a.testMethod();
 
         logger.error("success");
     }
