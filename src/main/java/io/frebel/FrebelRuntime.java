@@ -714,7 +714,7 @@ public class FrebelRuntime {
     }
 
     public static void invokeSetField(Object target, char arg, String owner, String fieldName, String className) {
-        invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Float.class}, Reflection.getCallerClass(2), className);
+        invokeWithParams("_$fr$_$s$" + fieldName, target, new Object[]{arg}, new Class[]{Character.class}, Reflection.getCallerClass(2), className);
     }
 
     public static String getMethodName(int paramsNum) {
