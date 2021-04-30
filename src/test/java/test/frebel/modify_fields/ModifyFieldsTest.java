@@ -14,6 +14,8 @@ public class ModifyFieldsTest {
         a.testMethod();
         reload("v2");
         a.testMethod();
+        reload("v3");
+        a.testMethod();
     }
 
     public void reload(String version) throws Exception {
