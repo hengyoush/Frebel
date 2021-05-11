@@ -51,6 +51,10 @@ public class ClassInner {
         return (originClassName = classNameUtf8.asString().replace("/", "."));
     }
 
+    public String getSlashOriginClassName() {
+        return getOriginClassName().replace(".", "/");
+    }
+
     public String getSuperClassName() {
         if (this.superClassName != null) {
             return superClassName;
@@ -63,6 +67,17 @@ public class ClassInner {
         ConstantClassInfo superClassInfo = (ConstantClassInfo) constantPool[superClass.toInt() - 1];
         ConstantUtf8Info classNameUtf8 = (ConstantUtf8Info) constantPool[superClassInfo.getNameIndex() - 1];
         return (superClassName = classNameUtf8.asString());
+    }
+
+    public void updateSuperClassName(String newSuperClassName) {
+
+        U2 superClass = classFile.getSuperClass();
+        CpInfo[] constantPool = classFile.getConstantPool();
+        ConstantClassInfo superClassInfo = (ConstantClassInfo) constantPool[superClass.toInt() - 1];
+        ConstantUtf8Info classNameUtf8 = (ConstantUtf8Info) constantPool[superClassInfo.getNameIndex() - 1];
+        classNameUtf8.update(newSuperClassName);
+        this.superClassName = null;
+        modified = true;
     }
 
     public List<String> getInterfaces() {

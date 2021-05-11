@@ -6,6 +6,7 @@ import io.frebel.util.PrimitiveTypeUtil;
 import javassist.*;
 
 import java.io.ByteArrayInputStream;
+import java.util.Arrays;
 
 public class AddForwardBCP implements ByteCodeProcessor {
     @Override
@@ -13,6 +14,7 @@ public class AddForwardBCP implements ByteCodeProcessor {
         ClassPool classPool = ClassPool.getDefault();
         try {
             CtClass ctClass = classPool.makeClass(new ByteArrayInputStream(bytes), false);
+            CtClass superclass = ctClass.getSuperclass();
             if (ctClass.isInterface()) {
                 return bytes;
             }
@@ -25,6 +27,10 @@ public class AddForwardBCP implements ByteCodeProcessor {
                 String primitiveMethodAppend = "";
 
                 CtMethod method = methods[i];
+                if (Arrays.stream(superclass.getMethods()).anyMatch(m -> m.getName().equals(method.getName())
+                && m.getSignature().equals(method.getSignature()))) {
+                    continue;
+                }
                 if (FieldAccessFlagUtils.isPublic(method.getModifiers())
                         && !Modifier.isAbstract(method.getModifiers())
                         // 支持native方法的转移？
