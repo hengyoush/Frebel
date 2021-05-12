@@ -6,12 +6,15 @@ import io.frebel.FrebelClassRegistry;
 import io.frebel.FrebelJVM;
 import io.frebel.FrebelProps;
 import io.frebel.bcp.*;
+import io.frebel.util.FrebelUnsafe;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
 import javassist.Modifier;
 import javassist.NotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.lang.instrument.ClassDefinition;
@@ -22,6 +25,9 @@ import java.util.stream.Collectors;
 
 public enum ReloadManager {
     INSTANCE;
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ReloadManager.class);
+
     private ByteCodeProcessor renameBCP = new RenameBCP();
     private ByteCodeProcessor addForward = new AddForwardBCP();
     private ByteCodeProcessor uidBCP = new AddUidBCP();
@@ -97,6 +103,8 @@ public enum ReloadManager {
             ctClass.debugWriteFile("./");
         }
         ctClass.toClass();
+        Class.forName(ctClass.getName());
+
         // redefine old class, add Forward
         if (redefineFlag) {
             try {
@@ -137,18 +145,22 @@ public enum ReloadManager {
             return;
         }
 
-        Map<String, Integer> freq = new HashMap<>();
+        // class -> superclass and interfaces
+        Map<String/* dot class name */, Set<String>> edges = new HashMap<>();
+        Map<String, Integer> indegree = new HashMap<>();
+        Deque<String> queue = new LinkedList<>();
         Map<String, ClassInner> nameMap =
                 Arrays.stream(classInners).collect(Collectors.
                         toMap(ClassInner::getOriginClassName, Function.identity()));
-        PriorityQueue<ClassInner> queue = new PriorityQueue<>((i, j) ->
-                Integer.compare(freq.getOrDefault(j.getSlashOriginClassName(), 0),
-                        freq.getOrDefault(i.getSlashOriginClassName(), 0)));
         for (ClassInner classInner : classInners) {
             String superClassName = classInner.getSuperClassName();
-            if (nameMap.containsKey(superClassName.replace("/", "."))) {
-                freq.put(superClassName,
-                        freq.getOrDefault(superClassName, 0) + 1);
+            String dotSuperClassName = superClassName.replace("/", ".");
+            if (nameMap.containsKey(dotSuperClassName)) {
+                indegree.put(classInner.getOriginClassName(),
+                        indegree.getOrDefault(classInner.getOriginClassName(), 0) + 1);
+                edges.computeIfAbsent(dotSuperClassName, c -> new HashSet<>())
+                        .add(classInner.getOriginClassName());
+
                 String newSuperClassName;
                 if (FrebelClassRegistry.getFrebelClass(superClassName) != null) {
                     newSuperClassName =
@@ -156,16 +168,35 @@ public enum ReloadManager {
                 } else {
                     newSuperClassName = superClassName + "_$fr$_" + 1;
                 }
-                classInner.updateSuperClassName(newSuperClassName);
+                classInner.updateSuperClassName(newSuperClassName.replace(".", "/"));
+            } else if (FrebelClassRegistry.getFrebelClass(superClassName) != null) {
+                classInner.updateSuperClassName(
+                        FrebelClassRegistry.getFrebelClass(superClassName).getCurrentVersionSlashClassName());
             }
         }
-        queue.addAll(Arrays.asList(classInners));
-        System.out.println("freq: " + freq);
-        // TODO BFS
+        System.out.println("indegree: " + indegree);
+        // bfs
         List<ClassInner> finalClassInners = new ArrayList<>();
-        while (!queue.isEmpty()) {
-            finalClassInners.add(reload(queue.poll(), false, false));
+        for (String dotClassName : nameMap.keySet()) {
+            if (indegree.getOrDefault(dotClassName, 0) == 0) {
+                queue.addFirst(dotClassName);
+            }
         }
+
+        while (queue.size() > 0) {
+            int s = queue.size();
+            while (s-- > 0) {
+                String dotClassName = queue.pollLast();
+                finalClassInners.add(reload(nameMap.get(dotClassName), false, false));
+                for (String subDotClassName : edges.getOrDefault(dotClassName, Collections.emptySet())) {
+                    indegree.put(subDotClassName, indegree.get(subDotClassName) - 1);
+                    if (indegree.get(subDotClassName) == 0) {
+                        queue.addFirst(subDotClassName);
+                    }
+                }
+            }
+        }
+
         for (ClassInner classInner : finalClassInners) {
             FrebelClass frebelClass = FrebelClassRegistry.getFrebelClass(classInner.getOriginClassName());
             frebelClass.addNewVersionClass(classInner);

@@ -64,6 +64,10 @@ public class FrebelClass {
         return versionClassMap.lastKey();
     }
 
+    public String getCurrentVersionSlashClassName() {
+        return versionClassMap.lastKey().replace(".", "/");
+    }
+
     public ClassInner getCurrentVersionClassInner() {
         return versionClassMap.lastEntry().getValue();
     }

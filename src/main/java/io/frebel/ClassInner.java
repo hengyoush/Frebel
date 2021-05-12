@@ -188,6 +188,7 @@ public class ClassInner {
                 bos.write(classFile.getConstantPoolCount().toBytes());
                 // constant pool
                 for (CpInfo cpInfo : classFile.getConstantPool()) {
+                    if (cpInfo == null) continue;
                     bos.write(cpInfo.toBytes());
                 }
                 // access flag

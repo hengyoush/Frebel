@@ -22,4 +22,8 @@ public class ArrayUtils {
         System.arraycopy(b, 0, res, a.length, b.length);
         return res;
     }
+
+    public static boolean isNotEmpty(Object[] arr) {
+        return arr != null && arr.length > 0;
+    }
 }

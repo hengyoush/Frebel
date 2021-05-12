@@ -1,6 +1,7 @@
 package io.frebel.bcp;
 
 import io.frebel.bytecode.FieldAccessFlagUtils;
+import io.frebel.util.ArrayUtils;
 import io.frebel.util.Descriptor;
 import io.frebel.util.PrimitiveTypeUtil;
 import javassist.*;
@@ -27,8 +28,9 @@ public class AddForwardBCP implements ByteCodeProcessor {
                 String primitiveMethodAppend = "";
 
                 CtMethod method = methods[i];
-                if (Arrays.stream(superclass.getMethods()).anyMatch(m -> m.getName().equals(method.getName())
-                && m.getSignature().equals(method.getSignature()))) {
+                if (!ArrayUtils.isNotEmpty(ctClass.getDeclaredMethods(method.getName())) &&
+                        Arrays.stream(superclass.getMethods()).anyMatch(m -> m.getName().equals(method.getName())
+                    && m.getSignature().equals(method.getSignature()))) {
                     continue;
                 }
                 if (FieldAccessFlagUtils.isPublic(method.getModifiers())
