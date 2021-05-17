@@ -70,13 +70,29 @@ public class ClassInner {
     }
 
     public void updateSuperClassName(String newSuperClassName) {
-
         U2 superClass = classFile.getSuperClass();
         CpInfo[] constantPool = classFile.getConstantPool();
         ConstantClassInfo superClassInfo = (ConstantClassInfo) constantPool[superClass.toInt() - 1];
         ConstantUtf8Info classNameUtf8 = (ConstantUtf8Info) constantPool[superClassInfo.getNameIndex() - 1];
         classNameUtf8.update(newSuperClassName);
         this.superClassName = null;
+        modified = true;
+    }
+
+    public void updateInterfaces(List<String> interfaceNames) {
+        U2[] interfacesIndex = classFile.getInterfaces();
+        CpInfo[] cpInfos = classFile.getConstantPool();
+        for (U2 index : interfacesIndex) {
+            ConstantClassInfo constantClassInfo = (ConstantClassInfo) cpInfos[index.toInt() - 1];
+            String interfaceName = ((ConstantUtf8Info) cpInfos[constantClassInfo.getNameIndex() - 1]).asString().replace("/", ".");
+            for (String newInterfaceName: interfaceNames) {
+                if (FrebelClassRegistry.isSameFrebelClassByName(newInterfaceName, interfaceName)) {
+                    ConstantUtf8Info classNameUtf8 = (ConstantUtf8Info) cpInfos[constantClassInfo.getNameIndex() - 1];
+                    classNameUtf8.update(newInterfaceName);
+                    break;
+                }
+            }
+        }
         modified = true;
     }
 

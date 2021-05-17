@@ -155,6 +155,7 @@ public enum ReloadManager {
         for (ClassInner classInner : classInners) {
             String superClassName = classInner.getSuperClassName();
             String dotSuperClassName = superClassName.replace("/", ".");
+            List<String> interfaces = classInner.getInterfaces();
             if (nameMap.containsKey(dotSuperClassName)) {
                 indegree.put(classInner.getOriginClassName(),
                         indegree.getOrDefault(classInner.getOriginClassName(), 0) + 1);
@@ -173,6 +174,30 @@ public enum ReloadManager {
                 classInner.updateSuperClassName(
                         FrebelClassRegistry.getFrebelClass(superClassName).getCurrentVersionSlashClassName());
             }
+
+            List<String> newInterfaceNames = new ArrayList<>();
+            for (String interfaceDotName : interfaces) {
+                if (nameMap.containsKey(interfaceDotName)) {
+                    indegree.put(classInner.getOriginClassName(),
+                            indegree.getOrDefault(classInner.getOriginClassName(), 0) + 1);
+                    edges.computeIfAbsent(interfaceDotName, c -> new HashSet<>())
+                            .add(classInner.getOriginClassName());
+                    String newInterfaceName;
+                    if (FrebelClassRegistry.getFrebelClass(interfaceDotName) != null) {
+                        newInterfaceName = FrebelClassRegistry.getFrebelClass(interfaceDotName)
+                                .getNextVersionClassName();
+                    } else {
+                        newInterfaceName = interfaceDotName + "_$fr$_" + 1;
+                    }
+                    newInterfaceNames.add(newInterfaceName);
+                } else if (FrebelClassRegistry.getFrebelClass(interfaceDotName) != null) {
+                    newInterfaceNames.add(FrebelClassRegistry.getFrebelClass(interfaceDotName)
+                        .getCurrentVersionClassName());
+                } else {
+                    newInterfaceNames.add(interfaceDotName);
+                }
+            }
+            classInner.updateInterfaces(newInterfaceNames);
         }
         System.out.println("indegree: " + indegree);
         // bfs

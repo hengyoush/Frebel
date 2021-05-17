@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -50,5 +51,12 @@ public class FrebelClassRegistry {
         FrebelClass frebelClass1 = getFrebelClass(className1);
         FrebelClass frebelClass2 = getFrebelClass(className2);
         return frebelClass2 != null && frebelClass1 == frebelClass2;
+    }
+
+    public static boolean isSameFrebelClassByName(String className1, String className2) {
+        String classNameWithoutFrebelSuffix1 = className1.split("_\\$fr\\$")[0];
+        String classNameWithoutFrebelSuffix2 = className2.split("_\\$fr\\$")[0];
+        return Objects.equals(classNameWithoutFrebelSuffix1,
+                classNameWithoutFrebelSuffix2);
     }
 }
