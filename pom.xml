@@ -243,8 +243,6 @@
                 <artifactId>maven-gpg-plugin</artifactId>
                 <version>1.5</version>
                 <configuration>
-<!--                    <executable>gpg</executable>-->
-<!--                    <passphrase>suyimoqi1117*</passphrase>-->
                 </configuration>
                 <executions>
                     <execution>
