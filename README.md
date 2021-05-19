@@ -12,7 +12,7 @@ Frebel是一个可以让你修改的JAVA代码实时生效的插件，它有如�
 - 功能丰富：支持方法新增删除、类新增删除、类继承关系的改变等原生JVM不支持的操作。
 
 ## 快速开始
-1. 下载Jar包
+1. 下载Jar包,地址:https://github.com/hengyoush/Frebel/releases/tag/1.0.0
 2. 在启动命令中加入：
     ```shell script
     -javaagent:/path/to/frebel-core-1.0.0.jar
