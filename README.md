@@ -1,4 +1,4 @@
-# Frebel--一款免费的JAVA代码热部署插件  
+# Frebel--让你修改的JAVA代码实时生效  
 
 ![Frebel](https://img.shields.io/github/issues/hengyoush/Frebel) 
 ![Frebel](https://img.shields.io/github/forks/hengyoush/Frebel)
