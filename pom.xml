@@ -6,7 +6,7 @@
 
     <groupId>io.frebel</groupId>
     <artifactId>frebel-core</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
 
     <name>frebel-core</name>
     <description>Frebel is a java agent plugin.
@@ -225,7 +225,7 @@
                 <artifactId>maven-javadoc-plugin</artifactId>
                 <version>3.0.0</version>
                 <configuration>
-                    <javadocExecutable>/Users/hengyouhai/.jenv/shims/javadoc</javadocExecutable>
+                    <javadocExecutable>${java.home}/bin/javadoc</javadocExecutable>
                     <encoding>UTF-8</encoding>
                     <doclint>none</doclint>
                 </configuration>

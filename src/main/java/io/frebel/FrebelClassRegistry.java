@@ -54,6 +54,8 @@ public class FrebelClassRegistry {
     }
 
     public static boolean isSameFrebelClassByName(String className1, String className2) {
+        className1 = className1.replace(".", "/");
+        className2 = className2.replace(".", "/");
         String classNameWithoutFrebelSuffix1 = className1.split("_\\$fr\\$")[0];
         String classNameWithoutFrebelSuffix2 = className2.split("_\\$fr\\$")[0];
         return Objects.equals(classNameWithoutFrebelSuffix1,

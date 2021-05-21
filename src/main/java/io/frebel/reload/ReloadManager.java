@@ -197,6 +197,8 @@ public enum ReloadManager {
                     newInterfaceNames.add(interfaceDotName);
                 }
             }
+            newInterfaceNames = 
+                    newInterfaceNames.stream().map(s -> s.replace(".", "/")).collect(Collectors.toList());
             classInner.updateInterfaces(newInterfaceNames);
         }
         System.out.println("indegree: " + indegree);
